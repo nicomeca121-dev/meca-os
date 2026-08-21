@@ -12,7 +12,18 @@ if(texto==="") return;
 
 addMessage(texto,"user");
 
+let candidato = detectMemoryCandidate(texto);
 
+
+if(candidato){
+
+    setTimeout(()=>{
+
+        showMemoryAlert(candidato);
+
+    },800);
+
+}
 guardarMemoria("Juan: "+texto);
 
 
