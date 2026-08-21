@@ -21,7 +21,7 @@ input.value="";
 
 setTimeout(()=>{
 
-let respuesta=mecaAnaliza(texto);
+let respuesta=mecaThink(texto);
 
 addMessage(respuesta,"meca");
 
