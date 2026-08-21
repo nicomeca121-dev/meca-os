@@ -1,7 +1,7 @@
 let memoria = JSON.parse(localStorage.getItem("meca_memoria")) || [];
 
 
-function sendMessage(){
+(){
 
 const input=document.getElementById("input");
 
@@ -281,3 +281,33 @@ pendingMemory=null;
 
 
 }
+async function askMecaAI(texto){
+
+    try{
+
+
+        const respuesta = await fetch(
+            "AQUI_VA_TU_URL_DEL_WORKER",
+            {
+                method:"POST",
+
+                body:texto
+            }
+        );
+
+
+        const resultado = await respuesta.text();
+
+
+        return resultado;
+
+
+    }catch(error){
+
+
+        return "Error de conexión con el núcleo M.E.C.A.";
+
+
+    }
+
+            }
