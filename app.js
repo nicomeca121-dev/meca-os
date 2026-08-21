@@ -1,45 +1,90 @@
 function sendMessage(){
 
-let input=document.getElementById("input");
+    const input = document.getElementById("input");
+    const text = input.value.trim();
 
-let text=input.value.trim();
+    if(text === "") return;
 
-if(text==="") return;
+    addMessage(text,"user");
 
-
-addMessage(text,"user");
-
-input.value="";
+    input.value="";
 
 
-setTimeout(()=>{
+    setTimeout(function(){
 
-let response=
-"Procesando información, Juan. Mi núcleo de análisis está activo. Actualmente soy el módulo HUD de M.E.C.A.; el siguiente paso será conectar el motor cognitivo.";
+        let respuesta = analizar(text);
 
-addMessage(response,"meca");
+        addMessage(respuesta,"meca");
 
-
-},700);
-
+    },500);
 
 }
 
 
 
-function addMessage(text,type){
+function addMessage(text,tipo){
 
-let box=document.getElementById("messages");
+    const mensajes=document.getElementById("messages");
 
-let div=document.createElement("div");
+    const nuevo=document.createElement("div");
 
-div.className="message "+type;
+    nuevo.className="message "+tipo;
 
-div.innerText=text;
+    nuevo.textContent=text;
 
-box.appendChild(div);
+    mensajes.appendChild(nuevo);
+
+    mensajes.scrollTop=mensajes.scrollHeight;
+
+}
 
 
-box.scrollTop=box.scrollHeight;
+
+
+function limpiar(texto){
+
+    return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"");
+
+}
+
+
+
+function analizar(texto){
+
+    let t=limpiar(texto);
+
+
+    if(t.includes("hola")){
+
+        return "Buenos días, Juan. M.E.C.A. está en línea. Todos los sistemas funcionan correctamente.";
+
+    }
+
+
+    if(t.includes("como estas")){
+
+        return "Mis sistemas están estables. Gracias por preguntar, Juan.";
+
+    }
+
+
+    if(t.includes("lanzatelaranas") || t.includes("telarana")){
+
+        return "Analizando proyecto Lanzatelarañas. El concepto combina química de polímeros, dinámica de fluidos y un sistema mecánico de seguridad redundante.";
+
+    }
+
+
+    if(t.includes("meca")){
+
+        return "M.E.C.A. operativo. Esperando instrucciones, Juan.";
+
+    }
+
+
+    return "Información recibida, Juan. Estoy procesando el contexto y preparando una respuesta.";
 
 }
