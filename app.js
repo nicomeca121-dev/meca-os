@@ -287,7 +287,7 @@ async function askMecaAI(texto){
 
 
         const respuesta = await fetch(
-            "AQUI_VA_TU_URL_DEL_WORKER",
+        https://meca-core.nicomeca121.workers.dev/,
             {
                 method:"POST",
 
