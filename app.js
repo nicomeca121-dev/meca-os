@@ -32,7 +32,21 @@ input.value="";
 
 setTimeout(()=>{
 
-let respuesta=mecaThink(texto);
+async function enviarAMeca(texto){
+
+const respuesta = await fetch(
+https://meca-core.nicomeca121.workers.dev/,
+{
+method:"POST",
+body:texto
+}
+);
+
+const datos = await respuesta.text();
+
+return datos;
+
+}
 
 addMessage(respuesta,"meca");
 
