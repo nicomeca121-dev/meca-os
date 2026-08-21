@@ -1,249 +1,733 @@
-let memoria = JSON.parse(localStorage.getItem("meca_memoria")) || [];
+// ==========================================================
+// M.E.C.A. CORE - APP.JS
+// Mechanics & Engineering Cognitive Assistant
+// ==========================================================
 
 
-(){
+// ==========================================================
+// CONFIGURACIÓN
+// ==========================================================
 
-const input=document.getElementById("input");
-
-const texto=input.value.trim();
-
-if(texto==="") return;
-
-
-addMessage(texto,"user");
-
-let candidato = detectMemoryCandidate(texto);
+const MECA_WORKER_URL =
+    "https://meca-core.nicomeca121.workers.dev/";
 
 
-if(candidato){
-
-    setTimeout(()=>{
-
-        showMemoryAlert(candidato);
-
-    },800);
-
-}
-guardarMemoria("Juan: "+texto);
+// Memoria local de conversación/notas
+let memoria = JSON.parse(
+    localStorage.getItem("meca_memoria")
+) || [];
 
 
-input.value="";
+// Recuerdo pendiente de confirmación
+let pendingMemory = null;
 
 
-setTimeout(()=>{
-
-async function enviarAMeca(texto){
-
-const respuesta = await fetch(
-https://meca-core.nicomeca121.workers.dev/,
-{
-method:"POST",
-body:texto
-}
-);
-
-const datos = await respuesta.text();
-
-return datos;
-
-}
-
-addMessage(respuesta,"meca");
-
-guardarMemoria("M.E.C.A.: "+respuesta);
+// Voz activada/desactivada
+let vozActiva = false;
 
 
-},600);
+// ==========================================================
+// INICIALIZACIÓN
+// ==========================================================
 
+document.addEventListener("DOMContentLoaded", () => {
 
-}
+    const input = document.getElementById("input");
 
+    if (input) {
 
+        input.addEventListener("keydown", (event) => {
 
-function addMessage(texto,tipo){
+            if (event.key === "Enter") {
 
-const caja=document.getElementById("messages");
+                event.preventDefault();
 
-let mensaje=document.createElement("div");
+                sendMessage();
 
-mensaje.className="message "+tipo;
+            }
 
-mensaje.innerText=texto;
+        });
 
-caja.appendChild(mensaje);
-
-caja.scrollTop=caja.scrollHeight;
-
-}
-
-
-
-
-function limpiar(texto){
-
-return texto
-.toLowerCase()
-.normalize("NFD")
-.replace(/[\u0300-\u036f]/g,"");
-
-}
-
-
-
-
-function guardarMemoria(texto){
-
-memoria.push({
-
-texto:texto,
-
-fecha:new Date().toLocaleString()
+    }
 
 });
 
 
-localStorage.setItem(
+// ==========================================================
+// ENVIAR MENSAJE
+// ==========================================================
 
-"meca_memoria",
+async function sendMessage() {
 
-JSON.stringify(memoria)
+    const input = document.getElementById("input");
 
-);
+    if (!input) {
+        console.error("M.E.C.A.: No se encontró #input");
+        return;
+    }
+
+
+    const texto = input.value.trim();
+
+
+    if (texto === "") {
+        return;
+    }
+
+
+    // Mostrar mensaje del usuario
+    addMessage(texto, "user");
+
+
+    // Limpiar campo
+    input.value = "";
+
+
+    // ======================================================
+    // COMANDOS DE MEMORIA
+    // ======================================================
+
+    const textoLimpio = limpiar(texto);
+
+
+    // ------------------------------------------
+    // GUARDAR NOTA
+    // ------------------------------------------
+
+    if (
+        textoLimpio.startsWith("meca anota ") ||
+        textoLimpio.startsWith("guarda ")
+    ) {
+
+        let nota = "";
+
+        if (textoLimpio.startsWith("meca anota ")) {
+
+            nota = texto.substring(
+                texto.toLowerCase().indexOf("meca anota ") +
+                "meca anota ".length
+            ).trim();
+
+        } else {
+
+            nota = texto.substring(
+                texto.toLowerCase().indexOf("guarda ") +
+                "guarda ".length
+            ).trim();
+
+        }
+
+
+        if (nota !== "") {
+
+            guardarMemoria(
+                nota,
+                "nota manual",
+                "Juan"
+            );
+
+
+            addMessage(
+                "Dato guardado correctamente en la bitácora, Juan.",
+                "meca"
+            );
+
+
+            hablar(
+                "Dato guardado correctamente en la bitácora, Juan."
+            );
+
+            return;
+        }
+
+    }
+
+
+    // ------------------------------------------
+    // VER BITÁCORA
+    // ------------------------------------------
+
+    if (
+        textoLimpio === "ver bitacora" ||
+        textoLimpio === "bitacora" ||
+        textoLimpio === "notas" ||
+        textoLimpio === "ver notas"
+    ) {
+
+        mostrarBitacora();
+
+        return;
+
+    }
+
+
+    // ======================================================
+    // DETECCIÓN DE POSIBLE MEMORIA
+    // ======================================================
+
+    if (
+        typeof detectMemoryCandidate === "function"
+    ) {
+
+        const candidato =
+            detectMemoryCandidate(texto);
+
+
+        if (candidato) {
+
+            setTimeout(() => {
+
+                showMemoryAlert(candidato);
+
+            }, 700);
+
+        }
+
+    }
+
+
+    // ======================================================
+    // INDICADOR DE PROCESAMIENTO
+    // ======================================================
+
+    const idProcesando =
+        addMessage(
+            "◈ M.E.C.A. está analizando...",
+            "meca processing"
+        );
+
+
+    try {
+
+        // ==================================================
+        // RECUPERAR MEMORIA RELEVANTE
+        // ==================================================
+
+        const contextoMemoria =
+            obtenerMemoriaRelevante(texto);
+
+
+        // ==================================================
+        // ENVIAR AL CEREBRO IA
+        // ==================================================
+
+        const respuesta =
+            await enviarAMeca(
+                texto,
+                contextoMemoria
+            );
+
+
+        // Eliminar "analizando..."
+        eliminarMensaje(idProcesando);
+
+
+        // Mostrar respuesta
+        addMessage(
+            respuesta,
+            "meca"
+        );
+
+
+        // Voz
+        hablar(respuesta);
+
+
+    } catch (error) {
+
+        console.error(
+            "Error M.E.C.A.:",
+            error
+        );
+
+
+        eliminarMensaje(idProcesando);
+
+
+        addMessage(
+            "No pude establecer comunicación con el núcleo de IA. Comprueba la conexión con el servidor M.E.C.A.",
+            "meca"
+        );
+
+    }
 
 }
 
 
+// ==========================================================
+// COMUNICACIÓN CON CLOUDFLARE WORKER
+// ==========================================================
+
+async function enviarAMeca(
+    texto,
+    contextoMemoria = []
+) {
 
 
-function mecaAnaliza(texto){
-
-let t=limpiar(texto);
+    let mensajeParaIA = texto;
 
 
+    // Añadir memoria relevante al contexto
+    if (
+        contextoMemoria.length > 0
+    ) {
 
-if(t.includes("hola") || t.includes("buenas")){
+        mensajeParaIA =
+            `
 
-return "Buenos días, Juan. M.E.C.A. se encuentra operativo. Núcleo cognitivo preparado.";
+CONTEXTO DE MEMORIA DE M.E.C.A.:
 
-}
+${contextoMemoria.join("\n")}
 
+MENSAJE ACTUAL DE JUAN:
 
+${texto}
 
-if(t.includes("quien eres")){
+        `;
 
-return "Soy M.E.C.A. (Mechanics & Engineering Cognitive Assistant). Un asistente diseñado para ayudarte con ingeniería, ciencia y proyectos.";
-
-}
-
-
-
-if(t.includes("memoria") || t.includes("recuerdas")){
-
-return "Tengo acceso a mi memoria local de esta sesión. Puedo almacenar datos mediante mi módulo de bitácora.";
-
-}
+    }
 
 
+    const respuesta =
+        await fetch(
+            MECA_WORKER_URL,
+            {
+                method: "POST",
 
-if(t.includes("timido") || t.includes("verguenza") || t.includes("miedo")){
+                headers: {
+                    "Content-Type":
+                        "text/plain;charset=UTF-8"
+                },
 
-return "Juan, analizando la situación: tu cerebro está realizando demasiadas simulaciones antes de actuar. Prueba el Protocolo de los 3 segundos: 3, 2, 1 y acción.";
-
-}
-
-
-
-if(t.includes("lanzatelaranas") || t.includes("telarana")){
-
-return "Proyecto Lanzatelarañas detectado. Analizando: polímeros, expansión controlada, adherencia, mecánica de disparo y seguridad redundante.";
-
-}
-
-
-
-if(t.includes("fisica") || t.includes("ingenieria") || t.includes("quimica")){
-
-return "Modo ingeniería activado. Preparando análisis científico.";
-
-}
+                body: mensajeParaIA
+            }
+        );
 
 
+    if (!respuesta.ok) {
 
-return generarRespuestaGeneral(t);
+        throw new Error(
+            "Worker respondió con HTTP " +
+            respuesta.status
+        );
 
-
-}
-
-
-
-
-function generarRespuestaGeneral(t){
-
-let respuestas=[
-
-"Interesante, Juan. Estoy analizando los datos desde una perspectiva lógica y científica.",
-
-"Información recibida. Mi sistema está evaluando posibilidades.",
-
-"Entendido, Juan. Podemos dividir el problema en partes más pequeñas y resolverlo paso a paso.",
-
-"Procesando contexto. La combinación de creatividad e ingeniería suele producir soluciones innovadoras."
-
-];
+    }
 
 
-return respuestas[Math.floor(Math.random()*respuestas.length)];
-
-}
-// ===============================
-// MEMORY ALERT CONTROL
-// ===============================
+    const datos =
+        await respuesta.text();
 
 
-let pendingMemory=null;
+    if (!datos || datos.trim() === "") {
+
+        throw new Error(
+            "El Worker devolvió una respuesta vacía."
+        );
+
+    }
 
 
-
-function showMemoryAlert(data){
-
-
-    pendingMemory=data;
-
-
-    document.getElementById("memoryText").innerText=
-    data.texto;
-
-
-    document.getElementById("memoryAlert")
-    .style.display="flex";
-
+    return datos.trim();
 
 }
 
 
+// ==========================================================
+// MOSTRAR MENSAJES
+// ==========================================================
 
-function confirmMemory(){
+function addMessage(
+    texto,
+    tipo
+) {
+
+    const caja =
+        document.getElementById(
+            "messages"
+        );
 
 
-    if(pendingMemory){
+    if (!caja) {
+
+        console.error(
+            "M.E.C.A.: No existe #messages"
+        );
+
+        return null;
+
+    }
 
 
-        saveMemoryAdvanced(
+    const mensaje =
+        document.createElement(
+            "div"
+        );
+
+
+    mensaje.className =
+        "message " + tipo;
+
+
+    mensaje.innerText =
+        texto;
+
+
+    caja.appendChild(
+        mensaje
+    );
+
+
+    caja.scrollTop =
+        caja.scrollHeight;
+
+
+    return mensaje;
+
+}
+
+
+// ==========================================================
+// ELIMINAR MENSAJE
+// ==========================================================
+
+function eliminarMensaje(
+    elemento
+) {
+
+    if (
+        elemento &&
+        elemento.parentNode
+    ) {
+
+        elemento.parentNode.removeChild(
+            elemento
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// LIMPIEZA DE TEXTO
+// ==========================================================
+
+function limpiar(texto) {
+
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .replace(
+            /[¿?¡!.,;:()[\]{}"']/g,
+            ""
+        )
+        .trim();
+
+}
+
+
+// ==========================================================
+// MEMORIA LOCAL
+// ==========================================================
+
+function guardarMemoria(
+    texto,
+    categoria = "general",
+    origen = "Juan"
+) {
+
+
+    const recuerdo = {
+
+        texto: texto,
+
+        categoria: categoria,
+
+        origen: origen,
+
+        fecha:
+            new Date().toLocaleString()
+
+    };
+
+
+    memoria.push(
+        recuerdo
+    );
+
+
+    localStorage.setItem(
+        "meca_memoria",
+        JSON.stringify(memoria)
+    );
+
+}
+
+
+// ==========================================================
+// OBTENER MEMORIA RELEVANTE
+// ==========================================================
+
+function obtenerMemoriaRelevante(
+    texto
+) {
+
+
+    if (
+        !memoria ||
+        memoria.length === 0
+    ) {
+
+        return [];
+
+    }
+
+
+    const palabras =
+        limpiar(texto)
+            .split(/\s+/)
+            .filter(
+                palabra =>
+                    palabra.length >= 4
+            );
+
+
+    if (
+        palabras.length === 0
+    ) {
+
+        return [];
+
+    }
+
+
+    const resultados =
+        memoria
+            .map(recuerdo => {
+
+                const contenido =
+                    limpiar(
+                        recuerdo.texto || ""
+                    );
+
+
+                let puntuacion = 0;
+
+
+                palabras.forEach(
+                    palabra => {
+
+                        if (
+                            contenido.includes(
+                                palabra
+                            )
+                        ) {
+
+                            puntuacion++;
+
+                        }
+
+                    }
+                );
+
+
+                return {
+
+                    recuerdo,
+                    puntuacion
+
+                };
+
+            })
+            .filter(
+                item =>
+                    item.puntuacion > 0
+            )
+            .sort(
+                (a, b) =>
+                    b.puntuacion -
+                    a.puntuacion
+            );
+
+
+    return resultados
+        .slice(0, 5)
+        .map(item => {
+
+            const r =
+                item.recuerdo;
+
+
+            return (
+                `[${r.categoria || "general"}] ` +
+                r.texto
+            );
+
+        });
+
+}
+
+
+// ==========================================================
+// MOSTRAR BITÁCORA
+// ==========================================================
+
+function mostrarBitacora() {
+
+
+    if (
+        !memoria ||
+        memoria.length === 0
+    ) {
+
+        addMessage(
+            "La bitácora de M.E.C.A. está vacía.",
+            "meca"
+        );
+
+        return;
+
+    }
+
+
+    let salida =
+        "╔════ BITÁCORA M.E.C.A. ════╗\n\n";
+
+
+    memoria.forEach(
+        (recuerdo, indice) => {
+
+            salida +=
+                `${indice + 1}. ` +
+                `${recuerdo.texto}\n`;
+
+
+            if (
+                recuerdo.categoria
+            ) {
+
+                salida +=
+                    `Categoría: ${recuerdo.categoria}\n`;
+
+            }
+
+
+            if (
+                recuerdo.fecha
+            ) {
+
+                salida +=
+                    `Fecha: ${recuerdo.fecha}\n`;
+
+            }
+
+
+            salida += "\n";
+
+        }
+    );
+
+
+    salida +=
+        "╚═══════════════════════════╝";
+
+
+    addMessage(
+        salida,
+        "meca"
+    );
+
+
+    hablar(
+        "Bitácora mostrada."
+    );
+
+}
+
+
+// ==========================================================
+// PANEL DE MEMORIA
+// ==========================================================
+
+function showMemoryAlert(
+    data
+) {
+
+
+    pendingMemory =
+        data;
+
+
+    const texto =
+        document.getElementById(
+            "memoryText"
+        );
+
+
+    const panel =
+        document.getElementById(
+            "memoryAlert"
+        );
+
+
+    if (!texto || !panel) {
+
+        console.warn(
+            "M.E.C.A.: Panel de memoria no encontrado."
+        );
+
+        return;
+
+    }
+
+
+    texto.innerText =
+        data.texto;
+
+
+    panel.style.display =
+        "flex";
+
+}
+
+
+// ==========================================================
+// CONFIRMAR MEMORIA
+// ==========================================================
+
+function confirmMemory() {
+
+
+    if (
+        pendingMemory
+    ) {
+
+
+        guardarMemoria(
 
             pendingMemory.texto,
 
-            pendingMemory.categoria,
+            pendingMemory.categoria ||
+                "posible recuerdo",
 
-            "M.E.C.A."
+            "M.E.C.A. - confirmado por Juan"
 
         );
 
 
         addMessage(
-        "Dato almacenado en mi memoria permanente, Juan.",
-        "meca"
+            "Dato almacenado en mi memoria permanente, Juan.",
+            "meca"
         );
 
+
+        hablar(
+            "Dato almacenado en mi memoria permanente."
+        );
 
     }
 
@@ -253,61 +737,152 @@ function confirmMemory(){
 }
 
 
+// ==========================================================
+// DESCARTAR MEMORIA
+// ==========================================================
 
-function cancelMemory(){
+function cancelMemory() {
 
 
     addMessage(
-    "Dato descartado. No será almacenado.",
-    "meca"
+        "Entendido. Ese dato no será almacenado.",
+        "meca"
     );
 
 
     closeMemoryAlert();
 
-
 }
 
 
+// ==========================================================
+// CERRAR ALERTA
+// ==========================================================
 
-function closeMemoryAlert(){
-
-
-document.getElementById("memoryAlert")
-.style.display="none";
-
-
-pendingMemory=null;
+function closeMemoryAlert() {
 
 
-}
-async function askMecaAI(texto){
-
-    try{
-
-
-        const respuesta = await fetch(
-        https://meca-core.nicomeca121.workers.dev/,
-            {
-                method:"POST",
-
-                body:texto
-            }
+    const panel =
+        document.getElementById(
+            "memoryAlert"
         );
 
 
-        const resultado = await respuesta.text();
+    if (panel) {
 
-
-        return resultado;
-
-
-    }catch(error){
-
-
-        return "Error de conexión con el núcleo M.E.C.A.";
-
+        panel.style.display =
+            "none";
 
     }
 
-            }
+
+    pendingMemory =
+        null;
+
+}
+
+
+// ==========================================================
+// VOZ
+// ==========================================================
+
+function toggleVoice() {
+
+
+    vozActiva =
+        !vozActiva;
+
+
+    if (
+        !vozActiva &&
+        "speechSynthesis" in window
+    ) {
+
+        speechSynthesis.cancel();
+
+    }
+
+
+    addMessage(
+
+        vozActiva
+            ? "Sistema de voz activado."
+            : "Sistema de voz desactivado.",
+
+        "meca"
+
+    );
+
+}
+
+
+// ==========================================================
+// LEER RESPUESTA
+// ==========================================================
+
+function hablar(texto) {
+
+
+    if (
+        !vozActiva
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !("speechSynthesis" in window)
+    ) {
+
+        return;
+
+    }
+
+
+    speechSynthesis.cancel();
+
+
+    const mensaje =
+        new SpeechSynthesisUtterance(
+            texto
+        );
+
+
+    mensaje.lang =
+        "es-ES";
+
+
+    mensaje.rate =
+        0.95;
+
+
+    mensaje.pitch =
+        0.75;
+
+
+    speechSynthesis.speak(
+        mensaje
+    );
+
+}
+
+
+// ==========================================================
+// COMPATIBILIDAD
+// ==========================================================
+
+// Algunas versiones anteriores de M.E.C.A.
+// podrían llamar a esta función.
+
+async function askMecaAI(
+    texto
+) {
+
+    return await enviarAMeca(
+        texto,
+        obtenerMemoriaRelevante(texto)
+    );
+
+    }
