@@ -170,3 +170,89 @@ let respuestas=[
 return respuestas[Math.floor(Math.random()*respuestas.length)];
 
 }
+// ===============================
+// MEMORY ALERT CONTROL
+// ===============================
+
+
+let pendingMemory=null;
+
+
+
+function showMemoryAlert(data){
+
+
+    pendingMemory=data;
+
+
+    document.getElementById("memoryText").innerText=
+    data.texto;
+
+
+    document.getElementById("memoryAlert")
+    .style.display="flex";
+
+
+}
+
+
+
+function confirmMemory(){
+
+
+    if(pendingMemory){
+
+
+        saveMemoryAdvanced(
+
+            pendingMemory.texto,
+
+            pendingMemory.categoria,
+
+            "M.E.C.A."
+
+        );
+
+
+        addMessage(
+        "Dato almacenado en mi memoria permanente, Juan.",
+        "meca"
+        );
+
+
+    }
+
+
+    closeMemoryAlert();
+
+}
+
+
+
+function cancelMemory(){
+
+
+    addMessage(
+    "Dato descartado. No será almacenado.",
+    "meca"
+    );
+
+
+    closeMemoryAlert();
+
+
+}
+
+
+
+function closeMemoryAlert(){
+
+
+document.getElementById("memoryAlert")
+.style.display="none";
+
+
+pendingMemory=null;
+
+
+}
