@@ -1,1 +1,249 @@
-style.css
+*{
+    box-sizing:border-box;
+}
+
+body{
+
+    margin:0;
+    min-height:100vh;
+
+    background:
+    radial-gradient(circle,#0b2545,#030712 70%);
+
+    color:#e2f1f8;
+
+    font-family:
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+}
+
+
+.hud{
+
+    width:95%;
+    max-width:600px;
+
+    margin:auto;
+    padding:15px;
+
+}
+
+
+header{
+
+    display:flex;
+    align-items:center;
+
+    gap:20px;
+
+}
+
+
+.core{
+
+    width:80px;
+    height:80px;
+
+    border-radius:50%;
+
+    border:3px solid #00ffcc;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    box-shadow:
+    0 0 20px #00ffcc;
+
+}
+
+
+.pulse{
+
+    width:35px;
+    height:35px;
+
+    background:#00ffcc;
+
+    border-radius:50%;
+
+    animation:pulse 1.5s infinite;
+
+}
+
+
+@keyframes pulse{
+
+    0%{
+        transform:scale(.8);
+        opacity:.5;
+    }
+
+    50%{
+        transform:scale(1.2);
+        opacity:1;
+    }
+
+    100%{
+        transform:scale(.8);
+        opacity:.5;
+    }
+
+}
+
+
+.title h1{
+
+    margin:0;
+
+    color:#00ffcc;
+
+    letter-spacing:5px;
+
+}
+
+
+.title p{
+
+    font-size:12px;
+
+}
+
+
+#status{
+
+    color:#00ffcc;
+
+}
+
+
+.system-panel{
+
+    display:flex;
+
+    gap:10px;
+
+    margin-top:20px;
+
+}
+
+
+.box{
+
+    flex:1;
+
+    background:#0b1528;
+
+    border:1px solid #00ffcc33;
+
+    padding:10px;
+
+    border-radius:10px;
+
+    font-size:13px;
+
+}
+
+
+.box h3{
+
+    color:#00ffcc;
+
+}
+
+
+
+.chat{
+
+    margin-top:20px;
+
+    background:#050b18;
+
+    border:1px solid #00ffcc55;
+
+    border-radius:15px;
+
+    padding:10px;
+
+}
+
+
+#messages{
+
+    height:350px;
+
+    overflow-y:auto;
+
+}
+
+
+.message{
+
+    padding:10px;
+
+    margin:8px 0;
+
+    border-radius:10px;
+
+}
+
+
+.meca{
+
+    background:#0b2545;
+
+    border-left:3px solid #00ffcc;
+
+}
+
+
+.user{
+
+    background:#132238;
+
+    border-right:3px solid #00ffcc;
+
+}
+
+
+.input-area{
+
+    display:flex;
+
+    gap:5px;
+
+}
+
+
+input{
+
+    flex:1;
+
+    padding:12px;
+
+    background:#030712;
+
+    color:white;
+
+    border:1px solid #00ffcc;
+
+    border-radius:8px;
+
+}
+
+
+button{
+
+    background:#00ffcc;
+
+    border:0;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    font-weight:bold;
+
+  }
