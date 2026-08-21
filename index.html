@@ -1,14 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<title>M.E.C.A.</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>M.E.C.A. OS</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
 
-<body style="background:#030712;color:#00ffcc;font-family:Arial;text-align:center">
+<body>
 
-<h1>M.E.C.A. ONLINE</h1>
+<div class="hud">
 
-<p>Mechanics & Engineering Cognitive Assistant</p>
+    <header>
+        <div class="core">
+            <div class="pulse"></div>
+        </div>
+
+        <div class="title">
+            <h1>M.E.C.A.</h1>
+            <p>Mechanics & Engineering Cognitive Assistant</p>
+            <span id="status">ONLINE</span>
+        </div>
+    </header>
+
+
+    <section class="system-panel">
+
+        <div class="box">
+            <h3>SISTEMA</h3>
+            <p>Motor cognitivo: ACTIVO</p>
+            <p>Modo: Ingeniería</p>
+            <p>Conexión: Estable</p>
+        </div>
+
+        <div class="box">
+            <h3>NÚCLEO</h3>
+            <p>Procesamiento listo</p>
+            <p>Memoria local preparada</p>
+        </div>
+
+    </section>
+
+
+    <section class="chat">
+
+        <div id="messages">
+
+            <div class="message meca">
+                M.E.C.A.: Sistemas iniciados. 
+                Buenos días, Juan. ¿En qué puedo ayudarte?
+            </div>
+
+        </div>
+
+
+        <div class="input-area">
+
+            <input 
+            id="input"
+            placeholder="Escribe a M.E.C.A..."
+            autocomplete="off">
+
+            <button onclick="sendMessage()">
+                ENVIAR
+            </button>
+
+        </div>
+
+    </section>
+
+
+</div>
+
+
+<script src="app.js"></script>
 
 </body>
-</html>
+                       </html>
