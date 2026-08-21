@@ -247,3 +247,31 @@ button{
     font-weight:bold;
 
   }
+<div id="memoryAlert" class="memory-alert">
+
+    <div class="memory-box">
+
+        <h2>⚙ M.E.C.A. MEMORY ALERT</h2>
+
+        <p id="memoryText">
+            Nuevo recuerdo detectado.
+        </p>
+
+        <p>
+            ¿Deseas almacenarlo en la bitácora?
+        </p>
+
+
+        <button onclick="confirmMemory()">
+            ✓ GUARDAR
+        </button>
+
+
+        <button onclick="cancelMemory()">
+            ✕ DESCARTAR
+        </button>
+
+
+    </div>
+
+</div>
