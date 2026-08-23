@@ -1,21 +1,21 @@
-/\* =========================================================
+/* =========================================================
    H.E.C.T.O.R. OS
    Conversational Core v2
-   \========================================================= \*/
+   ========================================================= */
 
-const WORKER\_URL =
-    "[https://meca-core.nicomeca121.workers.dev](https://meca-core.nicomeca121.workers.dev)";
+const WORKER_URL =
+    "https://meca-core.nicomeca121.workers.dev";
 
-const CHAT\_HISTORY\_KEY =
-    "hector\_conversation";
+const CHAT_HISTORY_KEY =
+    "hector_conversation";
 
-const BITACORA\_KEY =
-    "meca\_bitacora";
+const BITACORA_KEY =
+    "meca_bitacora";
 
 
-/\* =========================================================
+/* =========================================================
    ESTADO DEL SISTEMA
-   \========================================================= \*/
+   ========================================================= */
 
 let procesando = false;
 
@@ -30,43 +30,38 @@ let bloqueoHasta = 0;
 let intervaloBloqueo = null;
 
 
-/\* =========================================================
+/* =========================================================
    ELEMENTOS
-   \========================================================= \*/
+   ========================================================= */
 
 function input() {
     return document.getElementById("input");
 }
 
-
 function messages() {
     return document.getElementById("messages");
 }
-
 
 function sendButton() {
     return document.getElementById("sendButton");
 }
 
-
 function voiceButton() {
     return document.getElementById("voiceButton");
 }
 
-
 function thinkingStatus() {
     return document.getElementById("thinkingStatus");
 }
-
 
 function coreStatus() {
     return document.getElementById("coreStatus");
 }
 
 
-/\* =========================================================
+/* =========================================================
    UTILIDADES
-   \========================================================= \*/
+   ========================================================= */
 
 function normalizar(texto) {
 
@@ -77,24 +72,20 @@ function normalizar(texto) {
         .trim();
 }
 
-
 function escaparTexto(texto) {
-
     return String(texto || "");
 }
 
-
 function esperar(ms) {
-
     return new Promise(resolve =>
         setTimeout(resolve, ms)
     );
 }
 
 
-/\* =========================================================
+/* =========================================================
    CHAT VISUAL
-   \========================================================= \*/
+   ========================================================= */
 
 function addMessage(texto, tipo = "meca") {
 
@@ -102,13 +93,11 @@ function addMessage(texto, tipo = "meca") {
 
     if (!caja) return;
 
-
     const mensaje =
         document.createElement("div");
 
     mensaje.className =
         "message " + tipo;
-
 
     if (tipo === "meca") {
 
@@ -118,13 +107,11 @@ function addMessage(texto, tipo = "meca") {
         nombre.textContent =
             "H.E.C.T.O.R.";
 
-
         const contenido =
             document.createElement("span");
 
         contenido.textContent =
             escaparTexto(texto);
-
 
         mensaje.appendChild(nombre);
 
@@ -136,18 +123,16 @@ function addMessage(texto, tipo = "meca") {
             escaparTexto(texto);
     }
 
-
     caja.appendChild(mensaje);
-
 
     caja.scrollTop =
         caja.scrollHeight;
 }
 
 
-/\* =========================================================
+/* =========================================================
    HISTORIAL
-   \========================================================= \*/
+   ========================================================= */
 
 function obtenerHistorial() {
 
@@ -155,21 +140,17 @@ function obtenerHistorial() {
 
         const datos =
             localStorage.getItem(
-                CHAT\_HISTORY\_KEY
+                CHAT_HISTORY_KEY
             );
-
 
         if (!datos)
             return [];
 
-
         const historial =
             JSON.parse(datos);
 
-
         if (!Array.isArray(historial))
             return [];
-
 
         return historial.filter(
             mensaje =>
@@ -197,18 +178,17 @@ function guardarHistorial(historial) {
 
     try {
 
-        /\*
-         \* 20 mensajes = suficiente contexto
-         \* sin mandar una cantidad innecesaria
-         \* de información al Worker.
-         \*/
+        /*
+         * 20 mensajes = suficiente contexto
+         * sin mandar una cantidad innecesaria
+         * de información al Worker.
+         */
 
         const limitado =
             historial.slice(-20);
 
-
         localStorage.setItem(
-            CHAT\_HISTORY\_KEY,
+            CHAT_HISTORY_KEY,
             JSON.stringify(limitado)
         );
 
@@ -230,7 +210,6 @@ function registrarConversacion(
     const historial =
         obtenerHistorial();
 
-
     historial.push({
 
         role: role,
@@ -242,41 +221,36 @@ function registrarConversacion(
 
     });
 
-
     guardarHistorial(
         historial
     );
 }
 
 
-/\* =========================================================
+/* =========================================================
    RESTAURAR CHAT
-   \========================================================= \*/
+   ========================================================= */
 
 function restaurarConversacion() {
 
     const historial =
         obtenerHistorial();
 
-
     const caja =
         messages();
-
 
     if (!caja)
         return;
 
-
-    /\*
-     \* Si existe historial, eliminamos
-     \* el mensaje inicial del HTML para
-     \* evitar duplicaciones.
-     \*/
+    /*
+     * Si existe historial, eliminamos
+     * el mensaje inicial del HTML para
+     * evitar duplicaciones.
+     */
 
     if (historial.length > 0) {
 
         caja.innerHTML = "";
-
 
         historial.forEach(
             mensaje => {
@@ -294,38 +268,34 @@ function restaurarConversacion() {
 }
 
 
-/\* =========================================================
+/* =========================================================
    LIMPIAR CONVERSACIÓN
-   \========================================================= \*/
+   ========================================================= */
 
 function limpiarConversacion() {
 
     localStorage.removeItem(
-        CHAT\_HISTORY\_KEY
+        CHAT_HISTORY_KEY
     );
-
 
     const caja =
         messages();
 
-
     if (caja)
         caja.innerHTML = "";
-
 
     addMessage(
         "Historial conversacional eliminado. Núcleo listo."
     );
 }
 
-
-window\.limpiarConversacion =
+window.limpiarConversacion =
     limpiarConversacion;
 
 
-/\* =========================================================
+/* =========================================================
    BITÁCORA
-   \========================================================= \*/
+   ========================================================= */
 
 function obtenerBitacora() {
 
@@ -333,17 +303,14 @@ function obtenerBitacora() {
 
         const datos =
             localStorage.getItem(
-                BITACORA\_KEY
+                BITACORA_KEY
             );
-
 
         if (!datos)
             return [];
 
-
         const notas =
             JSON.parse(datos);
-
 
         return Array.isArray(notas)
             ? notas
@@ -361,7 +328,6 @@ function guardarNota(texto) {
     const notas =
         obtenerBitacora();
 
-
     notas.push({
 
         texto: String(texto),
@@ -373,11 +339,10 @@ function guardarNota(texto) {
 
     });
 
-
     try {
 
         localStorage.setItem(
-            BITACORA\_KEY,
+            BITACORA_KEY,
             JSON.stringify(notas)
         );
 
@@ -396,7 +361,6 @@ function mostrarBitacora() {
     const notas =
         obtenerBitacora();
 
-
     if (notas.length === 0) {
 
         addMessage(
@@ -406,52 +370,47 @@ function mostrarBitacora() {
         return;
     }
 
-
     addMessage(
-        \`BITÁCORA — ${notas.length} registro(s)\`
+        `BITÁCORA — ${notas.length} registro(s)`
     );
-
 
     notas.forEach(
         (nota, indice) => {
 
             addMessage(
-                \`${indice + 1}. [${nota.fecha}] ${nota.texto}\`
+                `${indice + 1}. [${nota.fecha}] ${nota.texto}`
             );
 
         }
     );
 }
 
-
-window\.mostrarBitacora =
+window.mostrarBitacora =
     mostrarBitacora;
 
 
-/\* =========================================================
+/* =========================================================
    COMANDOS LOCALES
-   \========================================================= \*/
+   ========================================================= */
 
 function procesarBitacora(texto) {
 
     const original =
         String(texto || "").trim();
 
-
     const limpio =
         normalizar(original);
 
-
-    /\*
-     \* IMPORTANTE:
-     \*
-     \* Estos comandos requieren que la frase
-     \* empiece exactamente de esta manera.
-     \*
-     \* Así evitamos que una palabra parecida
-     \* dentro de una conversación normal
-     \* active accidentalmente un comando.
-     \*/
+    /*
+     * IMPORTANTE:
+     *
+     * Estos comandos requieren que la frase
+     * empiece exactamente de esta manera.
+     *
+     * Así evitamos que una palabra parecida
+     * dentro de una conversación normal
+     * active accidentalmente un comando.
+     */
 
     if (
         limpio === "ver bitacora" ||
@@ -492,7 +451,6 @@ function procesarBitacora(texto) {
                     )
                     .trim();
 
-
             if (!nota) {
 
                 addMessage(
@@ -502,35 +460,30 @@ function procesarBitacora(texto) {
                 return true;
             }
 
-
             guardarNota(
                 nota
             );
-
 
             addMessage(
                 "Anotado. El registro quedó guardado en la bitácora."
             );
 
-
             return true;
         }
     }
-
 
     return false;
 }
 
 
-/\* =========================================================
+/* =========================================================
    COMANDOS DEL SISTEMA
-   \========================================================= \*/
+   ========================================================= */
 
 function procesarComandoSistema(texto) {
 
     const limpio =
         normalizar(texto);
-
 
     if (
         limpio === "limpiar conversacion" ||
@@ -554,19 +507,15 @@ function procesarComandoSistema(texto) {
 
         speechSynthesis.cancel();
 
-
         const boton =
             voiceButton();
-
 
         if (boton)
             boton.textContent = "◉";
 
-
         addMessage(
             "Salida de voz desactivada."
         );
-
 
         return true;
     }
@@ -579,46 +528,38 @@ function procesarComandoSistema(texto) {
 
         vozActiva = true;
 
-
         const boton =
             voiceButton();
 
-
         if (boton)
             boton.textContent = "◉ ON";
-
 
         addMessage(
             "Salida de voz activada."
         );
 
-
         return true;
     }
-
 
     return false;
 }
 
 
-/\* =========================================================
+/* =========================================================
    ESTADO VISUAL
-   \========================================================= \*/
+   ========================================================= */
 
 function estadoProcesando() {
 
     const status =
         thinkingStatus();
 
-
     const core =
         coreStatus();
-
 
     if (status)
         status.textContent =
             "PROCESSING";
-
 
     if (core)
         core.textContent =
@@ -631,15 +572,12 @@ function estadoListo() {
     const status =
         thinkingStatus();
 
-
     const core =
         coreStatus();
-
 
     if (status)
         status.textContent =
             "READY";
-
 
     if (core)
         core.textContent =
@@ -652,15 +590,12 @@ function estadoError() {
     const status =
         thinkingStatus();
 
-
     const core =
         coreStatus();
-
 
     if (status)
         status.textContent =
             "ERROR";
-
 
     if (core)
         core.textContent =
@@ -673,15 +608,12 @@ function estadoEspera(segundos) {
     const status =
         thinkingStatus();
 
-
     const core =
         coreStatus();
 
-
     if (status)
         status.textContent =
-            \`WAIT ${segundos}s\`;
-
+            `WAIT ${segundos}s`;
 
     if (core)
         core.textContent =
@@ -689,15 +621,14 @@ function estadoEspera(segundos) {
 }
 
 
-/\* =========================================================
+/* =========================================================
    ANALIZAR ERROR DEL WORKER
-   \========================================================= \*/
+   ========================================================= */
 
 function obtenerObjetoError(datos) {
 
     if (!datos)
         return null;
-
 
     if (
         datos.error &&
@@ -706,7 +637,6 @@ function obtenerObjetoError(datos) {
 
         return datos.error;
     }
-
 
     if (
         datos.details &&
@@ -717,7 +647,6 @@ function obtenerObjetoError(datos) {
         return datos.details.error;
     }
 
-
     return datos;
 }
 
@@ -727,19 +656,17 @@ function esRateLimit(datos, status) {
     const error =
         obtenerObjetoError(datos);
 
-
     const mensaje =
         JSON.stringify(
             error || datos || ""
         ).toLowerCase();
 
-
     return (
         status === 429 ||
-        mensaje.includes("too\_many\_requests") ||
+        mensaje.includes("too_many_requests") ||
         mensaje.includes("quota exceeded") ||
         mensaje.includes("rate limit") ||
-        mensaje.includes("free\_tier\_requests")
+        mensaje.includes("free_tier_requests")
     );
 }
 
@@ -751,20 +678,18 @@ function extraerSegundosEspera(datos) {
             datos || ""
         );
 
-
-    /\*
-     \* Gemini suele devolver:
-     \*
-     \* "retry in 45.328388789s"
-     \*
-     \* También contemplamos otras variantes.
-     \*/
+    /*
+     * Gemini suele devolver:
+     *
+     * "retry in 45.328388789s"
+     *
+     * También contemplamos otras variantes.
+     */
 
     const coincidencia =
         texto.match(
-            /retry(?:\s+in)?\s+([0-9]+(?:\\.[0-9]+)?)\s\*s/i
+            /retry(?:\s+in)?\s+([0-9]+(?:\.[0-9]+)?)\s*s/i
         );
-
 
     if (coincidencia) {
 
@@ -778,14 +703,13 @@ function extraerSegundosEspera(datos) {
         );
     }
 
-
     return 30;
 }
 
 
-/\* =========================================================
+/* =========================================================
    BLOQUEO POR CUOTA
-   \========================================================= \*/
+   ========================================================= */
 
 function iniciarBloqueo(segundos) {
 
@@ -795,20 +719,16 @@ function iniciarBloqueo(segundos) {
             Math.ceil(segundos)
         );
 
-
     bloqueoHasta =
         Date.now() +
-        segundos \* 1000;
-
+        segundos * 1000;
 
     actualizarBloqueo();
-
 
     if (intervaloBloqueo)
         clearInterval(
             intervaloBloqueo
         );
-
 
     intervaloBloqueo =
         setInterval(
@@ -831,32 +751,25 @@ function actualizarBloqueo() {
             )
         );
 
-
     if (restante <= 0) {
 
         clearInterval(
             intervaloBloqueo
         );
 
-
         intervaloBloqueo =
             null;
-
 
         bloqueoHasta =
             0;
 
-
         procesando =
             false;
 
-
         estadoListo();
-
 
         const boton =
             sendButton();
-
 
         if (boton) {
 
@@ -867,24 +780,19 @@ function actualizarBloqueo() {
                 "➤";
         }
 
-
         addMessage(
             "Núcleo disponible nuevamente."
         );
 
-
         return;
     }
-
 
     estadoEspera(
         restante
     );
 
-
     const boton =
         sendButton();
-
 
     if (boton) {
 
@@ -892,14 +800,14 @@ function actualizarBloqueo() {
             true;
 
         boton.textContent =
-            \`${restante}s\`;
+            `${restante}s`;
     }
 }
 
 
-/\* =========================================================
+/* =========================================================
    ERROR AMIGABLE
-   \========================================================= \*/
+   ========================================================= */
 
 function manejarErrorIA(
     datos,
@@ -910,7 +818,6 @@ function manejarErrorIA(
         "Respuesta del Worker:",
         datos
     );
-
 
     if (
         esRateLimit(
@@ -924,30 +831,24 @@ function manejarErrorIA(
                 datos
             );
 
-
         iniciarBloqueo(
             segundos
         );
 
-
         addMessage(
-            \`He alcanzado temporalmente el límite de procesamiento de Gemini. \` +
-            \`Podré continuar en aproximadamente ${segundos} segundos.\`
+            `He alcanzado temporalmente el límite de procesamiento de Gemini. ` +
+            `Podré continuar en aproximadamente ${segundos} segundos.`
         );
-
 
         return;
     }
 
-
     estadoError();
-
 
     const error =
         obtenerObjetoError(
             datos
         );
-
 
     const mensaje =
         (
@@ -956,7 +857,6 @@ function manejarErrorIA(
         )
             ? error.message
             : "";
-
 
     if (
         status === 401 ||
@@ -968,10 +868,8 @@ function manejarErrorIA(
             "La conexión está activa, pero la credencial necesita revisión."
         );
 
-
         return;
     }
-
 
     if (status === 400) {
 
@@ -980,10 +878,8 @@ function manejarErrorIA(
             "Puede tratarse de un formato o parámetro no válido."
         );
 
-
         return;
     }
-
 
     if (mensaje) {
 
@@ -993,7 +889,6 @@ function manejarErrorIA(
         );
     }
 
-
     addMessage(
         "El núcleo de IA encontró un problema al procesar la solicitud. " +
         "Revisa la consola para obtener el detalle técnico."
@@ -1001,15 +896,14 @@ function manejarErrorIA(
 }
 
 
-/\* =========================================================
+/* =========================================================
    IA
-   \========================================================= \*/
+   ========================================================= */
 
 async function hablarConIA(texto) {
 
     if (procesando)
         return;
-
 
     if (
         bloqueoHasta > Date.now()
@@ -1020,23 +914,19 @@ async function hablarConIA(texto) {
         return;
     }
 
-
     procesando =
         true;
 
-
     estadoProcesando();
-
 
     try {
 
         const historial =
             obtenerHistorial();
 
-
         const respuesta =
             await fetch(
-                WORKER\_URL,
+                WORKER_URL,
                 {
 
                     method: "POST",
@@ -1062,9 +952,7 @@ async function hablarConIA(texto) {
                 }
             );
 
-
         let datos;
-
 
         try {
 
@@ -1081,7 +969,6 @@ async function hablarConIA(texto) {
             };
         }
 
-
         if (!respuesta.ok) {
 
             manejarErrorIA(
@@ -1089,47 +976,38 @@ async function hablarConIA(texto) {
                 respuesta.status
             );
 
-
             return;
         }
-
 
         const respuestaIA =
             typeof datos.reply === "string"
                 ? datos.reply.trim()
                 : "";
 
-
         if (!respuestaIA) {
 
             estadoError();
-
 
             addMessage(
                 "El núcleo respondió, pero no devolvió contenido."
             );
 
-
             return;
         }
-
 
         addMessage(
             respuestaIA,
             "meca"
         );
 
-
         registrarConversacion(
             "assistant",
             respuestaIA
         );
 
-
         hablar(
             respuestaIA
         );
-
 
     } catch (error) {
 
@@ -1138,23 +1016,20 @@ async function hablarConIA(texto) {
             error
         );
 
-
         estadoError();
-
 
         addMessage(
             "No pude establecer comunicación con el núcleo de IA. " +
             "Comprueba la conexión con el servidor."
         );
 
-
     } finally {
 
-        /\*
-         \* Si existe un bloqueo de cuota,
-         \* el propio temporizador controla
-         \* el estado.
-         \*/
+        /*
+         * Si existe un bloqueo de cuota,
+         * el propio temporizador controla
+         * el estado.
+         */
 
         if (
             bloqueoHasta <= Date.now()
@@ -1169,19 +1044,17 @@ async function hablarConIA(texto) {
 }
 
 
-/\* =========================================================
+/* =========================================================
    ENVIAR MENSAJE
-   \========================================================= \*/
+   ========================================================= */
 
 async function sendMessage() {
 
     const campo =
         input();
 
-
     if (!campo)
         return;
-
 
     if (
         procesando ||
@@ -1191,35 +1064,29 @@ async function sendMessage() {
         return;
     }
 
-
     const texto =
         campo.value.trim();
 
-
     if (!texto)
         return;
-
 
     addMessage(
         texto,
         "usuario"
     );
 
-
     campo.value =
         "";
-
 
     registrarConversacion(
         "user",
         texto
     );
 
-
-    /\*
-     \* Primero procesamos comandos
-     \* que no necesitan IA.
-     \*/
+    /*
+     * Primero procesamos comandos
+     * que no necesitan IA.
+     */
 
     if (
         procesarComandoSistema(texto)
@@ -1228,7 +1095,6 @@ async function sendMessage() {
         return;
     }
 
-
     if (
         procesarBitacora(texto)
     ) {
@@ -1236,69 +1102,57 @@ async function sendMessage() {
         return;
     }
 
-
     await hablarConIA(
         texto
     );
 }
 
-
-window\.sendMessage =
+window.sendMessage =
     sendMessage;
 
 
-/\* =========================================================
+/* =========================================================
    VOZ — SALIDA
-   \========================================================= \*/
+   ========================================================= */
 
 function hablar(texto) {
 
     if (!vozActiva)
         return;
 
-
     if (
-        !window\.speechSynthesis
+        !window.speechSynthesis
     )
         return;
 
-
     speechSynthesis.cancel();
-
 
     const voz =
         new SpeechSynthesisUtterance(
             texto
         );
 
-
     voz.lang =
         "es-AR";
-
 
     voz.rate =
         0.95;
 
-
     voz.pitch =
         0.85;
 
-
     voz.volume =
         1;
-
 
     voz.onstart = () => {
 
         const status =
             thinkingStatus();
 
-
         if (status)
             status.textContent =
                 "SPEAKING";
     };
-
 
     voz.onend = () => {
 
@@ -1309,7 +1163,6 @@ function hablar(texto) {
             estadoListo();
         }
     };
-
 
     speechSynthesis.speak(
         voz
@@ -1322,10 +1175,8 @@ function toggleVoice() {
     vozActiva =
         !vozActiva;
 
-
     const boton =
         voiceButton();
-
 
     if (vozActiva) {
 
@@ -1333,15 +1184,13 @@ function toggleVoice() {
             boton.textContent =
                 "◉ ON";
 
-
         addMessage(
             "Salida de voz activada."
         );
 
-
-        /\*
-         \* Pequeña confirmación hablada.
-         \*/
+        /*
+         * Pequeña confirmación hablada.
+         */
 
         hablar(
             "Salida de voz activada."
@@ -1353,14 +1202,12 @@ function toggleVoice() {
             boton.textContent =
                 "◉";
 
-
         if (
-            window\.speechSynthesis
+            window.speechSynthesis
         ) {
 
             speechSynthesis.cancel();
         }
-
 
         addMessage(
             "Salida de voz desactivada."
@@ -1368,20 +1215,19 @@ function toggleVoice() {
     }
 }
 
-
-window\.toggleVoice =
+window.toggleVoice =
     toggleVoice;
 
 
-/\* =========================================================
+/* =========================================================
    RECONOCIMIENTO DE VOZ
-   \========================================================= \*/
+   ========================================================= */
 
 function obtenerReconocimientoVoz() {
 
     return (
-        window\.SpeechRecognition ||
-        window\.webkitSpeechRecognition ||
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition ||
         null
     );
 }
@@ -1392,7 +1238,6 @@ function iniciarReconocimientoVoz() {
     const SpeechRecognition =
         obtenerReconocimientoVoz();
 
-
     if (!SpeechRecognition) {
 
         addMessage(
@@ -1400,10 +1245,8 @@ function iniciarReconocimientoVoz() {
             "Prueba con Chrome o Edge."
         );
 
-
         return;
     }
-
 
     if (escuchando) {
 
@@ -1412,28 +1255,22 @@ function iniciarReconocimientoVoz() {
         return;
     }
 
-
     if (!reconocimientoVoz) {
 
         reconocimientoVoz =
             new SpeechRecognition();
 
-
         reconocimientoVoz.lang =
             "es-AR";
-
 
         reconocimientoVoz.continuous =
             false;
 
-
         reconocimientoVoz.interimResults =
             false;
 
-
         reconocimientoVoz.maxAlternatives =
             1;
-
 
         reconocimientoVoz.onstart =
             () => {
@@ -1441,19 +1278,15 @@ function iniciarReconocimientoVoz() {
                 escuchando =
                     true;
 
-
                 actualizarBotonMicrofono();
-
 
                 const status =
                     thinkingStatus();
-
 
                 if (status)
                     status.textContent =
                         "LISTENING";
             };
-
 
         reconocimientoVoz.onresult =
             event => {
@@ -1461,31 +1294,25 @@ function iniciarReconocimientoVoz() {
                 const resultado =
                     event.results[0][0].transcript;
 
-
                 const campo =
                     input();
-
 
                 if (campo) {
 
                     campo.value =
                         resultado;
 
-
                     campo.focus();
                 }
 
-
                 detenerReconocimientoVoz();
 
-
-                /\*
-                 \* No enviamos automáticamente.
-                 \* El usuario puede revisar lo
-                 \* que H.E.C.T.O.R. entendió.
-                 \*/
+                /*
+                 * No enviamos automáticamente.
+                 * El usuario puede revisar lo
+                 * que H.E.C.T.O.R. entendió.
+                 */
             };
-
 
         reconocimientoVoz.onerror =
             event => {
@@ -1495,16 +1322,12 @@ function iniciarReconocimientoVoz() {
                     event.error
                 );
 
-
                 escuchando =
                     false;
 
-
                 actualizarBotonMicrofono();
 
-
                 estadoListo();
-
 
                 if (
                     event.error ===
@@ -1517,16 +1340,13 @@ function iniciarReconocimientoVoz() {
                 }
             };
 
-
         reconocimientoVoz.onend =
             () => {
 
                 escuchando =
                     false;
 
-
                 actualizarBotonMicrofono();
-
 
                 if (
                     bloqueoHasta <= Date.now()
@@ -1536,7 +1356,6 @@ function iniciarReconocimientoVoz() {
                 }
             };
     }
-
 
     try {
 
@@ -1562,13 +1381,10 @@ function detenerReconocimientoVoz() {
         reconocimientoVoz.stop();
     }
 
-
     escuchando =
         false;
 
-
     actualizarBotonMicrofono();
-
 
     if (
         bloqueoHasta <= Date.now()
@@ -1586,16 +1402,13 @@ function actualizarBotonMicrofono() {
             "microphoneButton"
         );
 
-
     if (!boton)
         return;
-
 
     boton.textContent =
         escuchando
             ? "●"
             : "🎙";
-
 
     boton.title =
         escuchando
@@ -1603,28 +1416,24 @@ function actualizarBotonMicrofono() {
             : "Hablar con H.E.C.T.O.R.";
 }
 
-
-window\.iniciarReconocimientoVoz =
+window.iniciarReconocimientoVoz =
     iniciarReconocimientoVoz;
 
 
-/\* =========================================================
+/* =========================================================
    BÚSQUEDA GOOGLE
-   \========================================================= \*/
+   ========================================================= */
 
 function buscarEnGoogle() {
 
     const campo =
         input();
 
-
     if (!campo)
         return;
 
-
     const consulta =
         campo.value.trim();
-
 
     if (!consulta) {
 
@@ -1632,35 +1441,31 @@ function buscarEnGoogle() {
             "Escribe algo primero y lo buscaré en Google."
         );
 
-
         campo.focus();
 
         return;
     }
 
-
     const url =
-        "[https://www.google.com/search?q=](https://www.google.com/search?q=)" +
+        "https://www.google.com/search?q=" +
         encodeURIComponent(
             consulta
         );
 
-
-    window\.open(
+    window.open(
         url,
-        "\_blank",
+        "_blank",
         "noopener,noreferrer"
     );
 }
 
-
-window\.buscarEnGoogle =
+window.buscarEnGoogle =
     buscarEnGoogle;
 
 
-/\* =========================================================
+/* =========================================================
    CREAR BOTONES EXTRA
-   \========================================================= \*/
+   ========================================================= */
 
 function crearHerramientasExtra() {
 
@@ -1669,14 +1474,12 @@ function crearHerramientasExtra() {
             ".input-area"
         );
 
-
     if (!area)
         return;
 
-
-    /\*
-     \* Micrófono
-     \*/
+    /*
+     * Micrófono
+     */
 
     if (
         !document.getElementById(
@@ -1687,34 +1490,27 @@ function crearHerramientasExtra() {
         const botonMicrofono =
             document.createElement("button");
 
-
         botonMicrofono.id =
             "microphoneButton";
-
 
         botonMicrofono.className =
             "icon-button";
 
-
         botonMicrofono.textContent =
             "🎙";
-
 
         botonMicrofono.title =
             "Hablar con H.E.C.T.O.R.";
 
-
         botonMicrofono.onclick =
             iniciarReconocimientoVoz;
 
-
-        /\*
-         \* Lo colocamos antes del input.
-         \*/
+        /*
+         * Lo colocamos antes del input.
+         */
 
         const campo =
             input();
-
 
         if (campo)
             area.insertBefore(
@@ -1728,9 +1524,9 @@ function crearHerramientasExtra() {
     }
 
 
-    /\*
-     \* Google
-     \*/
+    /*
+     * Google
+     */
 
     if (
         !document.getElementById(
@@ -1741,26 +1537,20 @@ function crearHerramientasExtra() {
         const botonBusqueda =
             document.createElement("button");
 
-
         botonBusqueda.id =
             "searchButton";
-
 
         botonBusqueda.className =
             "icon-button";
 
-
         botonBusqueda.textContent =
             "⌕";
-
 
         botonBusqueda.title =
             "Buscar en Google";
 
-
         botonBusqueda.onclick =
             buscarEnGoogle;
-
 
         area.appendChild(
             botonBusqueda
@@ -1769,9 +1559,9 @@ function crearHerramientasExtra() {
 }
 
 
-/\* =========================================================
+/* =========================================================
    RELOJ
-   \========================================================= \*/
+   ========================================================= */
 
 function actualizarReloj() {
 
@@ -1780,14 +1570,11 @@ function actualizarReloj() {
             "clock"
         );
 
-
     if (!reloj)
         return;
 
-
     const ahora =
         new Date();
-
 
     reloj.textContent =
         ahora.toLocaleTimeString(
@@ -1802,42 +1589,37 @@ function actualizarReloj() {
         );
 }
 
-
 setInterval(
     actualizarReloj,
     1000
 );
 
 
-/\* =========================================================
+/* =========================================================
    ENTER
-   \========================================================= \*/
+   ========================================================= */
 
 function configurarInput() {
 
     const campo =
         input();
 
-
     if (!campo)
         return;
 
-
-    /\*
-     \* Evitamos agregar múltiples
-     \* listeners si el script se
-     \* vuelve a cargar.
-     \*/
+    /*
+     * Evitamos agregar múltiples
+     * listeners si el script se
+     * vuelve a cargar.
+     */
 
     if (
         campo.dataset.hectorReady
     )
         return;
 
-
     campo.dataset.hectorReady =
         "true";
-
 
     campo.addEventListener(
         "keydown",
@@ -1857,9 +1639,9 @@ function configurarInput() {
 }
 
 
-/\* =========================================================
+/* =========================================================
    ATAJOS DE TECLADO
-   \========================================================= \*/
+   ========================================================= */
 
 function configurarAtajos() {
 
@@ -1867,10 +1649,10 @@ function configurarAtajos() {
         "keydown",
         event => {
 
-            /\*
-             \* Ctrl + K
-             \* Enfoca el chat.
-             \*/
+            /*
+             * Ctrl + K
+             * Enfoca el chat.
+             */
 
             if (
                 event.ctrlKey &&
@@ -1879,27 +1661,25 @@ function configurarAtajos() {
 
                 event.preventDefault();
 
-
                 const campo =
                     input();
-
 
                 if (campo)
                     campo.focus();
             }
 
 
-            /\*
-             \* Escape
-             \* Detiene la voz.
-             \*/
+            /*
+             * Escape
+             * Detiene la voz.
+             */
 
             if (
                 event.key === "Escape"
             ) {
 
                 if (
-                    window\.speechSynthesis
+                    window.speechSynthesis
                 ) {
 
                     speechSynthesis.cancel();
@@ -1910,9 +1690,9 @@ function configurarAtajos() {
 }
 
 
-/\* =========================================================
+/* =========================================================
    INICIALIZACIÓN
-   \========================================================= \*/
+   ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
