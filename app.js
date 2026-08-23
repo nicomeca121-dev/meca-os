@@ -1,6 +1,6 @@
 /* =========================================================
    H.E.C.T.O.R. OS
-   Conversational Core
+   Conversational Core v2
    ========================================================= */
 
 const WORKER_URL =
@@ -12,30 +12,26 @@ const CHAT_HISTORY_KEY =
 const BITACORA_KEY =
     "meca_bitacora";
 
-let procesando = false;
-let vozActiva = false;
-
 
 /* =========================================================
-   CONFIGURACIÓN
+   ESTADO DEL SISTEMA
    ========================================================= */
 
-const CONFIG = {
+let procesando = false;
 
-    // Cantidad máxima de reintentos ante errores temporales
-    maxRetries: 2,
+let vozActiva = false;
 
-    // Tiempo inicial de espera
-    retryDelay: 2000,
+let escuchando = false;
 
-    // Tiempo máximo para considerar una petición demasiado larga
-    requestTimeout: 60000
+let reconocimientoVoz = null;
 
-};
+let bloqueoHasta = 0;
+
+let intervaloBloqueo = null;
 
 
 /* =========================================================
-   UTILIDADES
+   ELEMENTOS
    ========================================================= */
 
 function input() {
@@ -48,13 +44,51 @@ function messages() {
 }
 
 
+function sendButton() {
+    return document.getElementById("sendButton");
+}
+
+
+function voiceButton() {
+    return document.getElementById("voiceButton");
+}
+
+
+function thinkingStatus() {
+    return document.getElementById("thinkingStatus");
+}
+
+
+function coreStatus() {
+    return document.getElementById("coreStatus");
+}
+
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+
 function normalizar(texto) {
 
-    return texto
+    return String(texto || "")
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim();
+}
+
+
+function escaparTexto(texto) {
+
+    return String(texto || "");
+}
+
+
+function esperar(ms) {
+
+    return new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
 }
 
 
@@ -89,7 +123,7 @@ function addMessage(texto, tipo = "meca") {
             document.createElement("span");
 
         contenido.textContent =
-            texto;
+            escaparTexto(texto);
 
 
         mensaje.appendChild(nombre);
@@ -99,8 +133,7 @@ function addMessage(texto, tipo = "meca") {
     } else {
 
         mensaje.textContent =
-            texto;
-
+            escaparTexto(texto);
     }
 
 
@@ -125,6 +158,7 @@ function obtenerHistorial() {
                 CHAT_HISTORY_KEY
             );
 
+
         if (!datos)
             return [];
 
@@ -133,28 +167,58 @@ function obtenerHistorial() {
             JSON.parse(datos);
 
 
-        return Array.isArray(historial)
-            ? historial
-            : [];
+        if (!Array.isArray(historial))
+            return [];
 
-    } catch {
+
+        return historial.filter(
+            mensaje =>
+                mensaje &&
+                (
+                    mensaje.role === "user" ||
+                    mensaje.role === "assistant"
+                ) &&
+                typeof mensaje.text === "string"
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "No se pudo leer el historial:",
+            error
+        );
 
         return [];
-
     }
 }
 
 
 function guardarHistorial(historial) {
 
-    const limitado =
-        historial.slice(-16);
+    try {
+
+        /*
+         * 20 mensajes = suficiente contexto
+         * sin mandar una cantidad innecesaria
+         * de información al Worker.
+         */
+
+        const limitado =
+            historial.slice(-20);
 
 
-    localStorage.setItem(
-        CHAT_HISTORY_KEY,
-        JSON.stringify(limitado)
-    );
+        localStorage.setItem(
+            CHAT_HISTORY_KEY,
+            JSON.stringify(limitado)
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "No se pudo guardar el historial:",
+            error
+        );
+    }
 }
 
 
@@ -171,7 +235,7 @@ function registrarConversacion(
 
         role: role,
 
-        text: text,
+        text: String(text),
 
         timestamp:
             Date.now()
@@ -195,13 +259,6 @@ function restaurarConversacion() {
         obtenerHistorial();
 
 
-    if (
-        historial.length === 0
-    ) {
-        return;
-    }
-
-
     const caja =
         messages();
 
@@ -210,30 +267,60 @@ function restaurarConversacion() {
         return;
 
 
-    historial.forEach(
-        mensaje => {
+    /*
+     * Si existe historial, eliminamos
+     * el mensaje inicial del HTML para
+     * evitar duplicaciones.
+     */
 
-            if (
-                mensaje.role === "user"
-            ) {
+    if (historial.length > 0) {
+
+        caja.innerHTML = "";
+
+
+        historial.forEach(
+            mensaje => {
 
                 addMessage(
                     mensaje.text,
-                    "usuario"
-                );
-
-            } else {
-
-                addMessage(
-                    mensaje.text,
-                    "meca"
+                    mensaje.role === "user"
+                        ? "usuario"
+                        : "meca"
                 );
 
             }
+        );
+    }
+}
 
-        }
+
+/* =========================================================
+   LIMPIAR CONVERSACIÓN
+   ========================================================= */
+
+function limpiarConversacion() {
+
+    localStorage.removeItem(
+        CHAT_HISTORY_KEY
+    );
+
+
+    const caja =
+        messages();
+
+
+    if (caja)
+        caja.innerHTML = "";
+
+
+    addMessage(
+        "Historial conversacional eliminado. Núcleo listo."
     );
 }
+
+
+window.limpiarConversacion =
+    limpiarConversacion;
 
 
 /* =========================================================
@@ -244,16 +331,27 @@ function obtenerBitacora() {
 
     try {
 
-        return JSON.parse(
+        const datos =
             localStorage.getItem(
                 BITACORA_KEY
-            )
-        ) || [];
+            );
+
+
+        if (!datos)
+            return [];
+
+
+        const notas =
+            JSON.parse(datos);
+
+
+        return Array.isArray(notas)
+            ? notas
+            : [];
 
     } catch {
 
         return [];
-
     }
 }
 
@@ -266,7 +364,7 @@ function guardarNota(texto) {
 
     notas.push({
 
-        texto: texto,
+        texto: String(texto),
 
         fecha:
             new Date().toLocaleString(
@@ -276,10 +374,20 @@ function guardarNota(texto) {
     });
 
 
-    localStorage.setItem(
-        BITACORA_KEY,
-        JSON.stringify(notas)
-    );
+    try {
+
+        localStorage.setItem(
+            BITACORA_KEY,
+            JSON.stringify(notas)
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error guardando bitácora:",
+            error
+        );
+    }
 }
 
 
@@ -289,9 +397,7 @@ function mostrarBitacora() {
         obtenerBitacora();
 
 
-    if (
-        notas.length === 0
-    ) {
+    if (notas.length === 0) {
 
         addMessage(
             "La bitácora está vacía."
@@ -323,47 +429,35 @@ window.mostrarBitacora =
 
 
 /* =========================================================
-   QUICK COMMANDS
-   =========================================================
-
-   IMPORTANTE:
-
-   No buscamos simplemente palabras como:
-
-       "anota"
-       "guarda"
-
-   porque pueden aparecer dentro de una conversación normal.
-
-   Ahora exigimos que la frase empiece explícitamente
-   con una orden.
+   COMANDOS LOCALES
    ========================================================= */
 
 function procesarBitacora(texto) {
 
+    const original =
+        String(texto || "").trim();
+
+
     const limpio =
-        normalizar(texto);
+        normalizar(original);
 
 
-    /* -----------------------------------------------
-       VER BITÁCORA
-       ----------------------------------------------- */
-
-    const comandosVer = [
-
-        "ver bitacora",
-        "abre la bitacora",
-        "abrir bitacora",
-        "mostrar bitacora",
-        "muestra la bitacora",
-        "ver notas",
-        "mostrar notas"
-
-    ];
-
+    /*
+     * IMPORTANTE:
+     *
+     * Estos comandos requieren que la frase
+     * empiece exactamente de esta manera.
+     *
+     * Así evitamos que una palabra parecida
+     * dentro de una conversación normal
+     * active accidentalmente un comando.
+     */
 
     if (
-        comandosVer.includes(limpio)
+        limpio === "ver bitacora" ||
+        limpio === "bitacora" ||
+        limpio === "ver notas" ||
+        limpio === "mostrar bitacora"
     ) {
 
         mostrarBitacora();
@@ -372,53 +466,29 @@ function procesarBitacora(texto) {
     }
 
 
-    /* -----------------------------------------------
-       COMANDOS PARA GUARDAR
-       -----------------------------------------------
-
-       Solo funcionan si la frase comienza
-       con uno de estos comandos.
-       ----------------------------------------------- */
-
-    const comandosGuardar = [
+    const patrones = [
 
         "hector anota ",
         "hector guarda ",
-        "hector registra ",
-
-        "hector, anota ",
-        "hector, guarda ",
-        "hector, registra ",
-
-        "anota en la bitacora ",
-        "guarda en la bitacora ",
-        "registra en la bitacora "
+        "anota ",
+        "guardar en bitacora ",
+        "guarda en bitacora "
 
     ];
 
 
     for (
-        const comando
-        of comandosGuardar
+        const patron of patrones
     ) {
 
         if (
-            limpio.startsWith(comando)
+            limpio.startsWith(patron)
         ) {
 
-            const posicion =
-                texto
-                    .toLowerCase()
-                    .indexOf(
-                        comando
-                    );
-
-
             const nota =
-                texto
+                original
                     .substring(
-                        posicion +
-                        comando.length
+                        patron.length
                     )
                     .trim();
 
@@ -426,24 +496,104 @@ function procesarBitacora(texto) {
             if (!nota) {
 
                 addMessage(
-                    "Claro. ¿Qué quieres que registre en la bitácora?"
+                    "Claro. ¿Qué quieres que registre?"
                 );
 
                 return true;
             }
 
 
-            guardarNota(nota);
+            guardarNota(
+                nota
+            );
 
 
             addMessage(
-                "Registro almacenado en la bitácora."
+                "Anotado. El registro quedó guardado en la bitácora."
             );
 
 
             return true;
         }
+    }
 
+
+    return false;
+}
+
+
+/* =========================================================
+   COMANDOS DEL SISTEMA
+   ========================================================= */
+
+function procesarComandoSistema(texto) {
+
+    const limpio =
+        normalizar(texto);
+
+
+    if (
+        limpio === "limpiar conversacion" ||
+        limpio === "borrar conversacion" ||
+        limpio === "borrar historial"
+    ) {
+
+        limpiarConversacion();
+
+        return true;
+    }
+
+
+    if (
+        limpio === "detener voz" ||
+        limpio === "silenciar" ||
+        limpio === "silencio"
+    ) {
+
+        vozActiva = false;
+
+        speechSynthesis.cancel();
+
+
+        const boton =
+            voiceButton();
+
+
+        if (boton)
+            boton.textContent = "◉";
+
+
+        addMessage(
+            "Salida de voz desactivada."
+        );
+
+
+        return true;
+    }
+
+
+    if (
+        limpio === "activar voz" ||
+        limpio === "voz"
+    ) {
+
+        vozActiva = true;
+
+
+        const boton =
+            voiceButton();
+
+
+        if (boton)
+            boton.textContent = "◉ ON";
+
+
+        addMessage(
+            "Salida de voz activada."
+        );
+
+
+        return true;
     }
 
 
@@ -458,15 +608,11 @@ function procesarBitacora(texto) {
 function estadoProcesando() {
 
     const status =
-        document.getElementById(
-            "thinkingStatus"
-        );
+        thinkingStatus();
 
 
     const core =
-        document.getElementById(
-            "coreStatus"
-        );
+        coreStatus();
 
 
     if (status)
@@ -483,15 +629,11 @@ function estadoProcesando() {
 function estadoListo() {
 
     const status =
-        document.getElementById(
-            "thinkingStatus"
-        );
+        thinkingStatus();
 
 
     const core =
-        document.getElementById(
-            "coreStatus"
-        );
+        coreStatus();
 
 
     if (status)
@@ -505,23 +647,40 @@ function estadoListo() {
 }
 
 
-function estadoEsperando() {
+function estadoError() {
 
     const status =
-        document.getElementById(
-            "thinkingStatus"
-        );
+        thinkingStatus();
 
 
     const core =
-        document.getElementById(
-            "coreStatus"
-        );
+        coreStatus();
 
 
     if (status)
         status.textContent =
-            "WAITING";
+            "ERROR";
+
+
+    if (core)
+        core.textContent =
+            "ERROR";
+}
+
+
+function estadoEspera(segundos) {
+
+    const status =
+        thinkingStatus();
+
+
+    const core =
+        coreStatus();
+
+
+    if (status)
+        status.textContent =
+            `WAIT ${segundos}s`;
 
 
     if (core)
@@ -531,360 +690,249 @@ function estadoEsperando() {
 
 
 /* =========================================================
-   ESPERA
+   ANALIZAR ERROR DEL WORKER
    ========================================================= */
 
-function esperar(ms) {
+function obtenerObjetoError(datos) {
 
-    return new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                ms
-            )
+    if (!datos)
+        return null;
+
+
+    if (
+        datos.error &&
+        typeof datos.error === "object"
+    ) {
+
+        return datos.error;
+    }
+
+
+    if (
+        datos.details &&
+        datos.details.error &&
+        typeof datos.details.error === "object"
+    ) {
+
+        return datos.details.error;
+    }
+
+
+    return datos;
+}
+
+
+function esRateLimit(datos, status) {
+
+    const error =
+        obtenerObjetoError(datos);
+
+
+    const mensaje =
+        JSON.stringify(
+            error || datos || ""
+        ).toLowerCase();
+
+
+    return (
+        status === 429 ||
+        mensaje.includes("too_many_requests") ||
+        mensaje.includes("quota exceeded") ||
+        mensaje.includes("rate limit") ||
+        mensaje.includes("free_tier_requests")
     );
 }
 
 
-/* =========================================================
-   PETICIÓN AL WORKER
-   ========================================================= */
-
-async function realizarPeticion(
-    texto,
-    historial
-) {
-
-    let ultimoError =
-        null;
-
-
-    for (
-        let intento = 0;
-        intento <= CONFIG.maxRetries;
-        intento++
-    ) {
-
-        try {
-
-            const controller =
-                new AbortController();
-
-
-            const timeout =
-                setTimeout(
-                    () => {
-                        controller.abort();
-                    },
-                    CONFIG.requestTimeout
-                );
-
-
-            const respuesta =
-                await fetch(
-                    WORKER_URL,
-                    {
-
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-
-                                message:
-                                    texto,
-
-                                history:
-                                    historial
-
-                            }),
-
-                        signal:
-                            controller.signal
-
-                    }
-                );
-
-
-            clearTimeout(timeout);
-
-
-            let datos = null;
-
-
-            try {
-
-                datos =
-                    await respuesta.json();
-
-            } catch {
-
-                datos = null;
-
-            }
-
-
-            /* -----------------------------------------
-               ÉXITO
-               ----------------------------------------- */
-
-            if (
-                respuesta.ok
-            ) {
-
-                return {
-
-                    ok: true,
-
-                    data:
-                        datos
-
-                };
-
-            }
-
-
-            /* -----------------------------------------
-               RATE LIMIT
-               ----------------------------------------- */
-
-            if (
-                respuesta.status === 429
-            ) {
-
-                ultimoError = {
-
-                    type:
-                        "rate_limit",
-
-                    data:
-                        datos
-
-                };
-
-
-                /*
-                 * Si todavía tenemos intentos,
-                 * esperamos antes de repetir.
-                 */
-
-                if (
-                    intento <
-                    CONFIG.maxRetries
-                ) {
-
-                    estadoEsperando();
-
-
-                    const espera =
-                        CONFIG.retryDelay *
-                        Math.pow(
-                            2,
-                            intento
-                        );
-
-
-                    addMessage(
-                        `Cuota temporalmente limitada. Reintentando en ${Math.round(espera / 1000)} segundos...`
-                    );
-
-
-                    await esperar(
-                        espera
-                    );
-
-
-                    estadoProcesando();
-
-                    continue;
-
-                }
-
-
-                return {
-
-                    ok: false,
-
-                    error:
-                        ultimoError
-
-                };
-
-            }
-
-
-            /* -----------------------------------------
-               OTROS ERRORES
-               ----------------------------------------- */
-
-            return {
-
-                ok: false,
-
-                error: {
-
-                    type:
-                        "api",
-
-                    status:
-                        respuesta.status,
-
-                    data:
-                        datos
-
-                }
-
-            };
-
-
-        } catch (error) {
-
-            ultimoError =
-                error;
-
-
-            /*
-             * AbortError = timeout
-             */
-
-            if (
-                error.name ===
-                "AbortError"
-            ) {
-
-                return {
-
-                    ok: false,
-
-                    error: {
-
-                        type:
-                            "timeout"
-
-                    }
-
-                };
-
-            }
-
-
-            /*
-             * Error de conexión.
-             * Podemos intentar nuevamente.
-             */
-
-            if (
-                intento <
-                CONFIG.maxRetries
-            ) {
-
-                const espera =
-                    CONFIG.retryDelay *
-                    Math.pow(
-                        2,
-                        intento
-                    );
-
-
-                await esperar(
-                    espera
-                );
-
-
-                continue;
-
-            }
-
-        }
-
+function extraerSegundosEspera(datos) {
+
+    const texto =
+        JSON.stringify(
+            datos || ""
+        );
+
+
+    /*
+     * Gemini suele devolver:
+     *
+     * "retry in 45.328388789s"
+     *
+     * También contemplamos otras variantes.
+     */
+
+    const coincidencia =
+        texto.match(
+            /retry(?:\s+in)?\s+([0-9]+(?:\.[0-9]+)?)\s*s/i
+        );
+
+
+    if (coincidencia) {
+
+        return Math.max(
+            1,
+            Math.ceil(
+                Number(
+                    coincidencia[1]
+                )
+            )
+        );
     }
 
 
-    return {
-
-        ok: false,
-
-        error: {
-
-            type:
-                "connection",
-
-            original:
-                ultimoError
-
-        }
-
-    };
+    return 30;
 }
 
 
 /* =========================================================
-   INTERPRETAR ERROR
+   BLOQUEO POR CUOTA
    ========================================================= */
 
-function manejarErrorIA(error) {
+function iniciarBloqueo(segundos) {
 
-    if (!error) {
+    segundos =
+        Math.max(
+            1,
+            Math.ceil(segundos)
+        );
+
+
+    bloqueoHasta =
+        Date.now() +
+        segundos * 1000;
+
+
+    actualizarBloqueo();
+
+
+    if (intervaloBloqueo)
+        clearInterval(
+            intervaloBloqueo
+        );
+
+
+    intervaloBloqueo =
+        setInterval(
+            actualizarBloqueo,
+            250
+        );
+}
+
+
+function actualizarBloqueo() {
+
+    const restante =
+        Math.max(
+            0,
+            Math.ceil(
+                (
+                    bloqueoHasta -
+                    Date.now()
+                ) / 1000
+            )
+        );
+
+
+    if (restante <= 0) {
+
+        clearInterval(
+            intervaloBloqueo
+        );
+
+
+        intervaloBloqueo =
+            null;
+
+
+        bloqueoHasta =
+            0;
+
+
+        procesando =
+            false;
+
+
+        estadoListo();
+
+
+        const boton =
+            sendButton();
+
+
+        if (boton) {
+
+            boton.disabled =
+                false;
+
+            boton.textContent =
+                "➤";
+        }
+
 
         addMessage(
-            "El núcleo de IA no respondió correctamente."
+            "Núcleo disponible nuevamente."
         );
+
 
         return;
     }
 
 
-    /* -----------------------------------------------
-       CUOTA
-       ----------------------------------------------- */
+    estadoEspera(
+        restante
+    );
+
+
+    const boton =
+        sendButton();
+
+
+    if (boton) {
+
+        boton.disabled =
+            true;
+
+        boton.textContent =
+            `${restante}s`;
+    }
+}
+
+
+/* =========================================================
+   ERROR AMIGABLE
+   ========================================================= */
+
+function manejarErrorIA(
+    datos,
+    status
+) {
+
+    console.error(
+        "Respuesta del Worker:",
+        datos
+    );
+
 
     if (
-        error.type ===
-        "rate_limit"
+        esRateLimit(
+            datos,
+            status
+        )
     ) {
 
-        let esperaTexto =
-            "";
-
-
-        const mensaje =
-            error.data?.details?.error?.message ||
-            error.data?.error?.message ||
-            "";
-
-
-        const coincidencia =
-            mensaje.match(
-                /retry in ([0-9.]+)s/i
+        const segundos =
+            extraerSegundosEspera(
+                datos
             );
 
 
-        if (
-            coincidencia
-        ) {
-
-            const segundos =
-                Math.ceil(
-                    Number(
-                        coincidencia[1]
-                    )
-                );
-
-
-            esperaTexto =
-                ` El servicio indica esperar aproximadamente ${segundos} segundos.`;
-
-        }
+        iniciarBloqueo(
+            segundos
+        );
 
 
         addMessage(
-            "El núcleo de IA alcanzó temporalmente su cuota de solicitudes." +
-            esperaTexto +
-            " No es un fallo de H.E.C.T.O.R.; Gemini está limitando nuevas peticiones."
+            `He alcanzado temporalmente el límite de procesamiento de Gemini. ` +
+            `Podré continuar en aproximadamente ${segundos} segundos.`
         );
 
 
@@ -892,108 +940,63 @@ function manejarErrorIA(error) {
     }
 
 
-    /* -----------------------------------------------
-       TIMEOUT
-       ----------------------------------------------- */
+    estadoError();
+
+
+    const error =
+        obtenerObjetoError(
+            datos
+        );
+
+
+    const mensaje =
+        (
+            error &&
+            typeof error.message === "string"
+        )
+            ? error.message
+            : "";
+
 
     if (
-        error.type ===
-        "timeout"
+        status === 401 ||
+        status === 403
     ) {
 
         addMessage(
-            "La respuesta del núcleo tardó demasiado. La comunicación fue cancelada para evitar que H.E.C.T.O.R. quedara bloqueado."
+            "La autenticación con el núcleo de IA fue rechazada. " +
+            "La conexión está activa, pero la credencial necesita revisión."
         );
+
 
         return;
     }
 
 
-    /* -----------------------------------------------
-       CONEXIÓN
-       ----------------------------------------------- */
-
-    if (
-        error.type ===
-        "connection"
-    ) {
+    if (status === 400) {
 
         addMessage(
-            "No pude establecer comunicación con el núcleo de IA. Comprueba la conexión con el servidor H.E.C.T.O.R."
+            "El núcleo rechazó la solicitud. " +
+            "Puede tratarse de un formato o parámetro no válido."
         );
+
 
         return;
     }
 
 
-    /* -----------------------------------------------
-       API
-       ----------------------------------------------- */
+    if (mensaje) {
 
-    if (
-        error.type ===
-        "api"
-    ) {
-
-        console.error(
-            "Error Worker:",
-            error.data
+        console.warn(
+            "Detalle IA:",
+            mensaje
         );
-
-
-        const codigo =
-            error.data?.error?.code ||
-            error.data?.code ||
-            error.status;
-
-
-        if (
-            codigo === 401
-        ) {
-
-            addMessage(
-                "El núcleo rechazó las credenciales de autenticación."
-            );
-
-            return;
-        }
-
-
-        if (
-            codigo === 403
-        ) {
-
-            addMessage(
-                "El núcleo rechazó la solicitud por permisos o configuración del proyecto."
-            );
-
-            return;
-        }
-
-
-        if (
-            codigo === 400
-        ) {
-
-            addMessage(
-                "El núcleo rechazó la solicitud porque los datos enviados no tienen el formato esperado."
-            );
-
-            return;
-        }
-
-
-        addMessage(
-            "El núcleo de IA devolvió un error."
-        );
-
-
-        return;
     }
 
 
     addMessage(
-        "Se produjo un error inesperado en el núcleo de IA."
+        "El núcleo de IA encontró un problema al procesar la solicitud. " +
+        "Revisa la consola para obtener el detalle técnico."
     );
 }
 
@@ -1004,10 +1007,18 @@ function manejarErrorIA(error) {
 
 async function hablarConIA(texto) {
 
-    if (
-        procesando
-    )
+    if (procesando)
         return;
+
+
+    if (
+        bloqueoHasta > Date.now()
+    ) {
+
+        actualizarBloqueo();
+
+        return;
+    }
 
 
     procesando =
@@ -1023,40 +1034,81 @@ async function hablarConIA(texto) {
             obtenerHistorial();
 
 
-        const resultado =
-            await realizarPeticion(
-                texto,
-                historial
+        const respuesta =
+            await fetch(
+                WORKER_URL,
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            message:
+                                texto,
+
+                            history:
+                                historial
+
+                        })
+
+                }
             );
 
 
-        if (
-            !resultado.ok
-        ) {
+        let datos;
+
+
+        try {
+
+            datos =
+                await respuesta.json();
+
+        } catch {
+
+            datos = {
+                error: {
+                    message:
+                        "El Worker devolvió una respuesta no válida."
+                }
+            };
+        }
+
+
+        if (!respuesta.ok) {
 
             manejarErrorIA(
-                resultado.error
+                datos,
+                respuesta.status
             );
+
 
             return;
         }
 
 
-        const datos =
-            resultado.data;
-
-
         const respuestaIA =
-            datos?.reply;
+            typeof datos.reply === "string"
+                ? datos.reply.trim()
+                : "";
 
 
-        if (
-            !respuestaIA
-        ) {
+        if (!respuestaIA) {
+
+            estadoError();
+
 
             addMessage(
-                "Recibí una respuesta vacía del núcleo."
+                "El núcleo respondió, pero no devolvió contenido."
             );
+
 
             return;
         }
@@ -1079,20 +1131,46 @@ async function hablarConIA(texto) {
         );
 
 
+    } catch (error) {
+
+        console.error(
+            "Error de comunicación:",
+            error
+        );
+
+
+        estadoError();
+
+
+        addMessage(
+            "No pude establecer comunicación con el núcleo de IA. " +
+            "Comprueba la conexión con el servidor."
+        );
+
+
     } finally {
 
-        procesando =
-            false;
+        /*
+         * Si existe un bloqueo de cuota,
+         * el propio temporizador controla
+         * el estado.
+         */
 
+        if (
+            bloqueoHasta <= Date.now()
+        ) {
 
-        estadoListo();
+            procesando =
+                false;
 
+            estadoListo();
+        }
     }
 }
 
 
 /* =========================================================
-   SEND MESSAGE
+   ENVIAR MENSAJE
    ========================================================= */
 
 async function sendMessage() {
@@ -1105,17 +1183,20 @@ async function sendMessage() {
         return;
 
 
+    if (
+        procesando ||
+        bloqueoHasta > Date.now()
+    ) {
+
+        return;
+    }
+
+
     const texto =
         campo.value.trim();
 
 
     if (!texto)
-        return;
-
-
-    if (
-        procesando
-    )
         return;
 
 
@@ -1136,12 +1217,17 @@ async function sendMessage() {
 
 
     /*
-     * Primero intentamos detectar
-     * comandos locales.
-     *
-     * Solo los comandos explícitos
-     * son interceptados.
+     * Primero procesamos comandos
+     * que no necesitan IA.
      */
+
+    if (
+        procesarComandoSistema(texto)
+    ) {
+
+        return;
+    }
+
 
     if (
         procesarBitacora(texto)
@@ -1162,7 +1248,7 @@ window.sendMessage =
 
 
 /* =========================================================
-   VOZ
+   VOZ — SALIDA
    ========================================================= */
 
 function hablar(texto) {
@@ -1187,15 +1273,42 @@ function hablar(texto) {
 
 
     voz.lang =
-        "es-ES";
+        "es-AR";
 
 
     voz.rate =
-        .95;
+        0.95;
 
 
     voz.pitch =
-        .8;
+        0.85;
+
+
+    voz.volume =
+        1;
+
+
+    voz.onstart = () => {
+
+        const status =
+            thinkingStatus();
+
+
+        if (status)
+            status.textContent =
+                "SPEAKING";
+    };
+
+
+    voz.onend = () => {
+
+        if (
+            bloqueoHasta <= Date.now()
+        ) {
+
+            estadoListo();
+        }
+    };
 
 
     speechSynthesis.speak(
@@ -1211,14 +1324,10 @@ function toggleVoice() {
 
 
     const boton =
-        document.getElementById(
-            "voiceButton"
-        );
+        voiceButton();
 
 
-    if (
-        vozActiva
-    ) {
+    if (vozActiva) {
 
         if (boton)
             boton.textContent =
@@ -1226,7 +1335,16 @@ function toggleVoice() {
 
 
         addMessage(
-            "Voz activada."
+            "Salida de voz activada."
+        );
+
+
+        /*
+         * Pequeña confirmación hablada.
+         */
+
+        hablar(
+            "Salida de voz activada."
         );
 
     } else {
@@ -1236,19 +1354,419 @@ function toggleVoice() {
                 "◉";
 
 
-        speechSynthesis.cancel();
+        if (
+            window.speechSynthesis
+        ) {
+
+            speechSynthesis.cancel();
+        }
 
 
         addMessage(
-            "Voz desactivada."
+            "Salida de voz desactivada."
         );
-
     }
 }
 
 
 window.toggleVoice =
     toggleVoice;
+
+
+/* =========================================================
+   RECONOCIMIENTO DE VOZ
+   ========================================================= */
+
+function obtenerReconocimientoVoz() {
+
+    return (
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition ||
+        null
+    );
+}
+
+
+function iniciarReconocimientoVoz() {
+
+    const SpeechRecognition =
+        obtenerReconocimientoVoz();
+
+
+    if (!SpeechRecognition) {
+
+        addMessage(
+            "El navegador no admite entrada por voz. " +
+            "Prueba con Chrome o Edge."
+        );
+
+
+        return;
+    }
+
+
+    if (escuchando) {
+
+        detenerReconocimientoVoz();
+
+        return;
+    }
+
+
+    if (!reconocimientoVoz) {
+
+        reconocimientoVoz =
+            new SpeechRecognition();
+
+
+        reconocimientoVoz.lang =
+            "es-AR";
+
+
+        reconocimientoVoz.continuous =
+            false;
+
+
+        reconocimientoVoz.interimResults =
+            false;
+
+
+        reconocimientoVoz.maxAlternatives =
+            1;
+
+
+        reconocimientoVoz.onstart =
+            () => {
+
+                escuchando =
+                    true;
+
+
+                actualizarBotonMicrofono();
+
+
+                const status =
+                    thinkingStatus();
+
+
+                if (status)
+                    status.textContent =
+                        "LISTENING";
+            };
+
+
+        reconocimientoVoz.onresult =
+            event => {
+
+                const resultado =
+                    event.results[0][0].transcript;
+
+
+                const campo =
+                    input();
+
+
+                if (campo) {
+
+                    campo.value =
+                        resultado;
+
+
+                    campo.focus();
+                }
+
+
+                detenerReconocimientoVoz();
+
+
+                /*
+                 * No enviamos automáticamente.
+                 * El usuario puede revisar lo
+                 * que H.E.C.T.O.R. entendió.
+                 */
+            };
+
+
+        reconocimientoVoz.onerror =
+            event => {
+
+                console.warn(
+                    "Reconocimiento de voz:",
+                    event.error
+                );
+
+
+                escuchando =
+                    false;
+
+
+                actualizarBotonMicrofono();
+
+
+                estadoListo();
+
+
+                if (
+                    event.error ===
+                    "not-allowed"
+                ) {
+
+                    addMessage(
+                        "El navegador bloqueó el acceso al micrófono."
+                    );
+                }
+            };
+
+
+        reconocimientoVoz.onend =
+            () => {
+
+                escuchando =
+                    false;
+
+
+                actualizarBotonMicrofono();
+
+
+                if (
+                    bloqueoHasta <= Date.now()
+                ) {
+
+                    estadoListo();
+                }
+            };
+    }
+
+
+    try {
+
+        reconocimientoVoz.start();
+
+    } catch (error) {
+
+        console.warn(
+            "No se pudo iniciar el micrófono:",
+            error
+        );
+    }
+}
+
+
+function detenerReconocimientoVoz() {
+
+    if (
+        reconocimientoVoz &&
+        escuchando
+    ) {
+
+        reconocimientoVoz.stop();
+    }
+
+
+    escuchando =
+        false;
+
+
+    actualizarBotonMicrofono();
+
+
+    if (
+        bloqueoHasta <= Date.now()
+    ) {
+
+        estadoListo();
+    }
+}
+
+
+function actualizarBotonMicrofono() {
+
+    const boton =
+        document.getElementById(
+            "microphoneButton"
+        );
+
+
+    if (!boton)
+        return;
+
+
+    boton.textContent =
+        escuchando
+            ? "●"
+            : "🎙";
+
+
+    boton.title =
+        escuchando
+            ? "Detener escucha"
+            : "Hablar con H.E.C.T.O.R.";
+}
+
+
+window.iniciarReconocimientoVoz =
+    iniciarReconocimientoVoz;
+
+
+/* =========================================================
+   BÚSQUEDA GOOGLE
+   ========================================================= */
+
+function buscarEnGoogle() {
+
+    const campo =
+        input();
+
+
+    if (!campo)
+        return;
+
+
+    const consulta =
+        campo.value.trim();
+
+
+    if (!consulta) {
+
+        addMessage(
+            "Escribe algo primero y lo buscaré en Google."
+        );
+
+
+        campo.focus();
+
+        return;
+    }
+
+
+    const url =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(
+            consulta
+        );
+
+
+    window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+    );
+}
+
+
+window.buscarEnGoogle =
+    buscarEnGoogle;
+
+
+/* =========================================================
+   CREAR BOTONES EXTRA
+   ========================================================= */
+
+function crearHerramientasExtra() {
+
+    const area =
+        document.querySelector(
+            ".input-area"
+        );
+
+
+    if (!area)
+        return;
+
+
+    /*
+     * Micrófono
+     */
+
+    if (
+        !document.getElementById(
+            "microphoneButton"
+        )
+    ) {
+
+        const botonMicrofono =
+            document.createElement("button");
+
+
+        botonMicrofono.id =
+            "microphoneButton";
+
+
+        botonMicrofono.className =
+            "icon-button";
+
+
+        botonMicrofono.textContent =
+            "🎙";
+
+
+        botonMicrofono.title =
+            "Hablar con H.E.C.T.O.R.";
+
+
+        botonMicrofono.onclick =
+            iniciarReconocimientoVoz;
+
+
+        /*
+         * Lo colocamos antes del input.
+         */
+
+        const campo =
+            input();
+
+
+        if (campo)
+            area.insertBefore(
+                botonMicrofono,
+                campo
+            );
+        else
+            area.appendChild(
+                botonMicrofono
+            );
+    }
+
+
+    /*
+     * Google
+     */
+
+    if (
+        !document.getElementById(
+            "searchButton"
+        )
+    ) {
+
+        const botonBusqueda =
+            document.createElement("button");
+
+
+        botonBusqueda.id =
+            "searchButton";
+
+
+        botonBusqueda.className =
+            "icon-button";
+
+
+        botonBusqueda.textContent =
+            "⌕";
+
+
+        botonBusqueda.title =
+            "Buscar en Google";
+
+
+        botonBusqueda.onclick =
+            buscarEnGoogle;
+
+
+        area.appendChild(
+            botonBusqueda
+        );
+    }
+}
 
 
 /* =========================================================
@@ -1275,13 +1793,11 @@ function actualizarReloj() {
         ahora.toLocaleTimeString(
             "es-AR",
             {
-
                 hour:
                     "2-digit",
 
                 minute:
                     "2-digit"
-
             }
         );
 }
@@ -1297,46 +1813,122 @@ setInterval(
    ENTER
    ========================================================= */
 
+function configurarInput() {
+
+    const campo =
+        input();
+
+
+    if (!campo)
+        return;
+
+
+    /*
+     * Evitamos agregar múltiples
+     * listeners si el script se
+     * vuelve a cargar.
+     */
+
+    if (
+        campo.dataset.hectorReady
+    )
+        return;
+
+
+    campo.dataset.hectorReady =
+        "true";
+
+
+    campo.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key ===
+                "Enter"
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+            }
+        }
+    );
+}
+
+
+/* =========================================================
+   ATAJOS DE TECLADO
+   ========================================================= */
+
+function configurarAtajos() {
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            /*
+             * Ctrl + K
+             * Enfoca el chat.
+             */
+
+            if (
+                event.ctrlKey &&
+                event.key.toLowerCase() === "k"
+            ) {
+
+                event.preventDefault();
+
+
+                const campo =
+                    input();
+
+
+                if (campo)
+                    campo.focus();
+            }
+
+
+            /*
+             * Escape
+             * Detiene la voz.
+             */
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                if (
+                    window.speechSynthesis
+                ) {
+
+                    speechSynthesis.cancel();
+                }
+            }
+        }
+    );
+}
+
+
+/* =========================================================
+   INICIALIZACIÓN
+   ========================================================= */
+
 document.addEventListener(
     "DOMContentLoaded",
     () => {
 
-        const campo =
-            input();
+        configurarInput();
 
+        configurarAtajos();
 
-        if (campo) {
+        crearHerramientasExtra();
 
-            campo.addEventListener(
-                "keydown",
-                event => {
-
-                    if (
-                        event.key ===
-                        "Enter"
-                    ) {
-
-                        event.preventDefault();
-
-                        sendMessage();
-
-                    }
-
-                }
-            );
-
-        }
-
+        restaurarConversacion();
 
         actualizarReloj();
 
-
-        /*
-         * Restauramos conversaciones
-         * anteriores.
-         */
-
-        restaurarConversacion();
+        estadoListo();
 
     }
 );
