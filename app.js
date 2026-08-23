@@ -603,21 +603,39 @@ async function hablarConGemini(texto) {
 
         if (!respuesta.ok) {
 
-            console.error(
-                "Error Worker:",
-                datos
+    console.error(
+        "ERROR COMPLETO DEL WORKER:",
+        datos
+    );
+
+    let detalle = "";
+
+    if (datos.details) {
+        detalle =
+            typeof datos.details === "string"
+                ? datos.details
+                : JSON.stringify(datos.details);
+    }
+
+    if (datos.error) {
+        detalle +=
+            "\n" +
+            (
+                typeof datos.error === "string"
+                    ? datos.error
+                    : JSON.stringify(datos.error)
             );
+    }
 
+    agregarMensaje(
+        "M.E.C.A.: el núcleo de IA devolvió un error.\n\n" +
+        detalle
+    );
 
-            agregarMensaje(
-                "M.E.C.A.: el núcleo de IA devolvió un error."
-            );
+    procesando = false;
 
-            procesando = false;
-
-            return;
+    return;
         }
-
 
         if (
             datos.reply
