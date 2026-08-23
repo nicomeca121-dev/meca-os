@@ -12,14 +12,26 @@ const CHAT_HISTORY_KEY =
 const BITACORA_KEY =
     "meca_bitacora";
 
-
-/* =========================================================
-   ESTADO DEL SISTEMA
-   ========================================================= */
-
 let procesando = false;
 let vozActiva = false;
-let escuchando = false;
+
+
+/* =========================================================
+   CONFIGURACIÓN
+   ========================================================= */
+
+const CONFIG = {
+
+    // Cantidad máxima de reintentos ante errores temporales
+    maxRetries: 2,
+
+    // Tiempo inicial de espera
+    retryDelay: 2000,
+
+    // Tiempo máximo para considerar una petición demasiado larga
+    requestTimeout: 60000
+
+};
 
 
 /* =========================================================
@@ -94,13 +106,14 @@ function addMessage(texto, tipo = "meca") {
 
     caja.appendChild(mensaje);
 
+
     caja.scrollTop =
         caja.scrollHeight;
 }
 
 
 /* =========================================================
-   HISTORIAL CONVERSACIONAL
+   HISTORIAL
    ========================================================= */
 
 function obtenerHistorial() {
@@ -111,7 +124,6 @@ function obtenerHistorial() {
             localStorage.getItem(
                 CHAT_HISTORY_KEY
             );
-
 
         if (!datos)
             return [];
@@ -135,12 +147,8 @@ function obtenerHistorial() {
 
 function guardarHistorial(historial) {
 
-    /*
-     * Conservamos los últimos 20 mensajes.
-     */
-
     const limitado =
-        historial.slice(-20);
+        historial.slice(-16);
 
 
     localStorage.setItem(
@@ -190,9 +198,7 @@ function restaurarConversacion() {
     if (
         historial.length === 0
     ) {
-
         return;
-
     }
 
 
@@ -208,8 +214,7 @@ function restaurarConversacion() {
         mensaje => {
 
             if (
-                mensaje.role ===
-                "user"
+                mensaje.role === "user"
             ) {
 
                 addMessage(
@@ -239,23 +244,11 @@ function obtenerBitacora() {
 
     try {
 
-        const datos =
+        return JSON.parse(
             localStorage.getItem(
                 BITACORA_KEY
-            );
-
-
-        if (!datos)
-            return [];
-
-
-        const notas =
-            JSON.parse(datos);
-
-
-        return Array.isArray(notas)
-            ? notas
-            : [];
+            )
+        ) || [];
 
     } catch {
 
@@ -305,7 +298,6 @@ function mostrarBitacora() {
         );
 
         return;
-
     }
 
 
@@ -331,7 +323,20 @@ window.mostrarBitacora =
 
 
 /* =========================================================
-   COMANDOS DE BITÁCORA
+   QUICK COMMANDS
+   =========================================================
+
+   IMPORTANTE:
+
+   No buscamos simplemente palabras como:
+
+       "anota"
+       "guarda"
+
+   porque pueden aparecer dentro de una conversación normal.
+
+   Ahora exigimos que la frase empiece explícitamente
+   con una orden.
    ========================================================= */
 
 function procesarBitacora(texto) {
@@ -340,15 +345,25 @@ function procesarBitacora(texto) {
         normalizar(texto);
 
 
-    /* -----------------------------------------
+    /* -----------------------------------------------
        VER BITÁCORA
-       ----------------------------------------- */
+       ----------------------------------------------- */
+
+    const comandosVer = [
+
+        "ver bitacora",
+        "abre la bitacora",
+        "abrir bitacora",
+        "mostrar bitacora",
+        "muestra la bitacora",
+        "ver notas",
+        "mostrar notas"
+
+    ];
+
 
     if (
-        limpio === "ver bitacora" ||
-        limpio === "bitacora" ||
-        limpio === "ver notas" ||
-        limpio === "mostrar bitacora"
+        comandosVer.includes(limpio)
     ) {
 
         mostrarBitacora();
@@ -357,74 +372,45 @@ function procesarBitacora(texto) {
     }
 
 
-    /* -----------------------------------------
-       BORRAR BITÁCORA
-       ----------------------------------------- */
+    /* -----------------------------------------------
+       COMANDOS PARA GUARDAR
+       -----------------------------------------------
 
-    if (
-        limpio === "borrar bitacora" ||
-        limpio === "vaciar bitacora"
-    ) {
+       Solo funcionan si la frase comienza
+       con uno de estos comandos.
+       ----------------------------------------------- */
 
-        const confirmar =
-            confirm(
-                "¿Seguro que quieres borrar toda la bitácora?"
-            );
+    const comandosGuardar = [
 
-
-        if (confirmar) {
-
-            localStorage.removeItem(
-                BITACORA_KEY
-            );
-
-
-            addMessage(
-                "Bitácora eliminada."
-            );
-
-        } else {
-
-            addMessage(
-                "Operación cancelada."
-            );
-
-        }
-
-
-        return true;
-    }
-
-
-    /* -----------------------------------------
-       GUARDAR NOTA
-       ----------------------------------------- */
-
-    const patrones = [
-
-        "meca anota ",
         "hector anota ",
-        "h.e.c.t.o.r. anota ",
-        "anota ",
-        "guarda ",
-        "guardar "
+        "hector guarda ",
+        "hector registra ",
+
+        "hector, anota ",
+        "hector, guarda ",
+        "hector, registra ",
+
+        "anota en la bitacora ",
+        "guarda en la bitacora ",
+        "registra en la bitacora "
 
     ];
 
 
     for (
-        const patron of patrones
+        const comando
+        of comandosGuardar
     ) {
 
         if (
-            limpio.startsWith(patron)
+            limpio.startsWith(comando)
         ) {
 
             const posicion =
                 texto
                     .toLowerCase()
                     .indexOf(
-                        patron
+                        comando
                     );
 
 
@@ -432,7 +418,7 @@ function procesarBitacora(texto) {
                 texto
                     .substring(
                         posicion +
-                        patron.length
+                        comando.length
                     )
                     .trim();
 
@@ -440,11 +426,10 @@ function procesarBitacora(texto) {
             if (!nota) {
 
                 addMessage(
-                    "Claro, Juan. ¿Qué quieres que anote?"
+                    "Claro. ¿Qué quieres que registre en la bitácora?"
                 );
 
                 return true;
-
             }
 
 
@@ -452,12 +437,13 @@ function procesarBitacora(texto) {
 
 
             addMessage(
-                "Anotado. El registro quedó guardado en la bitácora."
+                "Registro almacenado en la bitácora."
             );
 
 
             return true;
         }
+
     }
 
 
@@ -466,125 +452,10 @@ function procesarBitacora(texto) {
 
 
 /* =========================================================
-   BÚSQUEDA EN GOOGLE
+   ESTADO VISUAL
    ========================================================= */
 
-function buscarGoogle(consulta) {
-
-    if (!consulta)
-        return;
-
-
-    consulta =
-        consulta.trim();
-
-
-    if (!consulta)
-        return;
-
-
-    const url =
-        "https://www.google.com/search?q=" +
-        encodeURIComponent(
-            consulta
-        );
-
-
-    window.open(
-        url,
-        "_blank",
-        "noopener,noreferrer"
-    );
-
-
-    addMessage(
-        `Abriendo búsqueda: ${consulta}`
-    );
-}
-
-
-window.buscarGoogle =
-    buscarGoogle;
-
-
-/* =========================================================
-   COMANDO "BUSCAR"
-   ========================================================= */
-
-function procesarBusqueda(texto) {
-
-    const limpio =
-        normalizar(texto);
-
-
-    const patrones = [
-
-        "buscar ",
-        "busca ",
-        "google ",
-        "busca en google "
-
-    ];
-
-
-    for (
-        const patron of patrones
-    ) {
-
-        if (
-            limpio.startsWith(patron)
-        ) {
-
-            const posicion =
-                texto
-                    .toLowerCase()
-                    .indexOf(
-                        patron
-                    );
-
-
-            const consulta =
-                texto
-                    .substring(
-                        posicion +
-                        patron.length
-                    )
-                    .trim();
-
-
-            if (!consulta) {
-
-                addMessage(
-                    "¿Qué quieres que busque?"
-                );
-
-                return true;
-
-            }
-
-
-            buscarGoogle(
-                consulta
-            );
-
-
-            return true;
-        }
-    }
-
-
-    return false;
-}
-
-
-/* =========================================================
-   ESTADOS DEL HUD
-   ========================================================= */
-
-function establecerEstado(
-    estado,
-    secundario = ""
-) {
+function estadoProcesando() {
 
     const status =
         document.getElementById(
@@ -598,84 +469,531 @@ function establecerEstado(
         );
 
 
-    const systemStatus =
-        document.getElementById(
-            "systemStatus"
-        );
-
-
     if (status)
         status.textContent =
-            estado;
+            "PROCESSING";
 
 
     if (core)
         core.textContent =
-            secundario ||
-            estado;
-
-
-    if (systemStatus)
-        systemStatus.textContent =
-            estado;
-
-
-    /*
-     * Permite que CSS pueda reaccionar
-     * al estado del sistema.
-     */
-
-    document.body.dataset.hectorState =
-        estado.toLowerCase();
-
-
-    const coreElement =
-        document.querySelector(
-            ".core"
-        );
-
-
-    if (coreElement) {
-
-        coreElement.dataset.state =
-            estado.toLowerCase();
-
-    }
+            "ANALYZING";
 }
 
 
 function estadoListo() {
 
-    establecerEstado(
-        "READY",
-        "ONLINE"
+    const status =
+        document.getElementById(
+            "thinkingStatus"
+        );
+
+
+    const core =
+        document.getElementById(
+            "coreStatus"
+        );
+
+
+    if (status)
+        status.textContent =
+            "READY";
+
+
+    if (core)
+        core.textContent =
+            "READY";
+}
+
+
+function estadoEsperando() {
+
+    const status =
+        document.getElementById(
+            "thinkingStatus"
+        );
+
+
+    const core =
+        document.getElementById(
+            "coreStatus"
+        );
+
+
+    if (status)
+        status.textContent =
+            "WAITING";
+
+
+    if (core)
+        core.textContent =
+            "RATE LIMIT";
+}
+
+
+/* =========================================================
+   ESPERA
+   ========================================================= */
+
+function esperar(ms) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
     );
 }
 
 
-function estadoProcesando() {
+/* =========================================================
+   PETICIÓN AL WORKER
+   ========================================================= */
 
-    establecerEstado(
-        "PROCESSING",
-        "ANALYZING"
-    );
+async function realizarPeticion(
+    texto,
+    historial
+) {
+
+    let ultimoError =
+        null;
+
+
+    for (
+        let intento = 0;
+        intento <= CONFIG.maxRetries;
+        intento++
+    ) {
+
+        try {
+
+            const controller =
+                new AbortController();
+
+
+            const timeout =
+                setTimeout(
+                    () => {
+                        controller.abort();
+                    },
+                    CONFIG.requestTimeout
+                );
+
+
+            const respuesta =
+                await fetch(
+                    WORKER_URL,
+                    {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                message:
+                                    texto,
+
+                                history:
+                                    historial
+
+                            }),
+
+                        signal:
+                            controller.signal
+
+                    }
+                );
+
+
+            clearTimeout(timeout);
+
+
+            let datos = null;
+
+
+            try {
+
+                datos =
+                    await respuesta.json();
+
+            } catch {
+
+                datos = null;
+
+            }
+
+
+            /* -----------------------------------------
+               ÉXITO
+               ----------------------------------------- */
+
+            if (
+                respuesta.ok
+            ) {
+
+                return {
+
+                    ok: true,
+
+                    data:
+                        datos
+
+                };
+
+            }
+
+
+            /* -----------------------------------------
+               RATE LIMIT
+               ----------------------------------------- */
+
+            if (
+                respuesta.status === 429
+            ) {
+
+                ultimoError = {
+
+                    type:
+                        "rate_limit",
+
+                    data:
+                        datos
+
+                };
+
+
+                /*
+                 * Si todavía tenemos intentos,
+                 * esperamos antes de repetir.
+                 */
+
+                if (
+                    intento <
+                    CONFIG.maxRetries
+                ) {
+
+                    estadoEsperando();
+
+
+                    const espera =
+                        CONFIG.retryDelay *
+                        Math.pow(
+                            2,
+                            intento
+                        );
+
+
+                    addMessage(
+                        `Cuota temporalmente limitada. Reintentando en ${Math.round(espera / 1000)} segundos...`
+                    );
+
+
+                    await esperar(
+                        espera
+                    );
+
+
+                    estadoProcesando();
+
+                    continue;
+
+                }
+
+
+                return {
+
+                    ok: false,
+
+                    error:
+                        ultimoError
+
+                };
+
+            }
+
+
+            /* -----------------------------------------
+               OTROS ERRORES
+               ----------------------------------------- */
+
+            return {
+
+                ok: false,
+
+                error: {
+
+                    type:
+                        "api",
+
+                    status:
+                        respuesta.status,
+
+                    data:
+                        datos
+
+                }
+
+            };
+
+
+        } catch (error) {
+
+            ultimoError =
+                error;
+
+
+            /*
+             * AbortError = timeout
+             */
+
+            if (
+                error.name ===
+                "AbortError"
+            ) {
+
+                return {
+
+                    ok: false,
+
+                    error: {
+
+                        type:
+                            "timeout"
+
+                    }
+
+                };
+
+            }
+
+
+            /*
+             * Error de conexión.
+             * Podemos intentar nuevamente.
+             */
+
+            if (
+                intento <
+                CONFIG.maxRetries
+            ) {
+
+                const espera =
+                    CONFIG.retryDelay *
+                    Math.pow(
+                        2,
+                        intento
+                    );
+
+
+                await esperar(
+                    espera
+                );
+
+
+                continue;
+
+            }
+
+        }
+
+    }
+
+
+    return {
+
+        ok: false,
+
+        error: {
+
+            type:
+                "connection",
+
+            original:
+                ultimoError
+
+        }
+
+    };
 }
 
 
-function estadoEscuchando() {
+/* =========================================================
+   INTERPRETAR ERROR
+   ========================================================= */
 
-    establecerEstado(
-        "LISTENING",
-        "AUDIO INPUT"
-    );
-}
+function manejarErrorIA(error) {
+
+    if (!error) {
+
+        addMessage(
+            "El núcleo de IA no respondió correctamente."
+        );
+
+        return;
+    }
 
 
-function estadoRespondiendo() {
+    /* -----------------------------------------------
+       CUOTA
+       ----------------------------------------------- */
 
-    establecerEstado(
-        "RESPONDING",
-        "VOICE OUTPUT"
+    if (
+        error.type ===
+        "rate_limit"
+    ) {
+
+        let esperaTexto =
+            "";
+
+
+        const mensaje =
+            error.data?.details?.error?.message ||
+            error.data?.error?.message ||
+            "";
+
+
+        const coincidencia =
+            mensaje.match(
+                /retry in ([0-9.]+)s/i
+            );
+
+
+        if (
+            coincidencia
+        ) {
+
+            const segundos =
+                Math.ceil(
+                    Number(
+                        coincidencia[1]
+                    )
+                );
+
+
+            esperaTexto =
+                ` El servicio indica esperar aproximadamente ${segundos} segundos.`;
+
+        }
+
+
+        addMessage(
+            "El núcleo de IA alcanzó temporalmente su cuota de solicitudes." +
+            esperaTexto +
+            " No es un fallo de H.E.C.T.O.R.; Gemini está limitando nuevas peticiones."
+        );
+
+
+        return;
+    }
+
+
+    /* -----------------------------------------------
+       TIMEOUT
+       ----------------------------------------------- */
+
+    if (
+        error.type ===
+        "timeout"
+    ) {
+
+        addMessage(
+            "La respuesta del núcleo tardó demasiado. La comunicación fue cancelada para evitar que H.E.C.T.O.R. quedara bloqueado."
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------
+       CONEXIÓN
+       ----------------------------------------------- */
+
+    if (
+        error.type ===
+        "connection"
+    ) {
+
+        addMessage(
+            "No pude establecer comunicación con el núcleo de IA. Comprueba la conexión con el servidor H.E.C.T.O.R."
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------
+       API
+       ----------------------------------------------- */
+
+    if (
+        error.type ===
+        "api"
+    ) {
+
+        console.error(
+            "Error Worker:",
+            error.data
+        );
+
+
+        const codigo =
+            error.data?.error?.code ||
+            error.data?.code ||
+            error.status;
+
+
+        if (
+            codigo === 401
+        ) {
+
+            addMessage(
+                "El núcleo rechazó las credenciales de autenticación."
+            );
+
+            return;
+        }
+
+
+        if (
+            codigo === 403
+        ) {
+
+            addMessage(
+                "El núcleo rechazó la solicitud por permisos o configuración del proyecto."
+            );
+
+            return;
+        }
+
+
+        if (
+            codigo === 400
+        ) {
+
+            addMessage(
+                "El núcleo rechazó la solicitud porque los datos enviados no tienen el formato esperado."
+            );
+
+            return;
+        }
+
+
+        addMessage(
+            "El núcleo de IA devolvió un error."
+        );
+
+
+        return;
+    }
+
+
+    addMessage(
+        "Se produjo un error inesperado en el núcleo de IA."
     );
 }
 
@@ -686,7 +1004,9 @@ function estadoRespondiendo() {
 
 async function hablarConIA(texto) {
 
-    if (procesando)
+    if (
+        procesando
+    )
         return;
 
 
@@ -703,98 +1023,28 @@ async function hablarConIA(texto) {
             obtenerHistorial();
 
 
-        const bitacora =
-            obtenerBitacora();
-
-
-        /*
-         * Mandamos tanto historial como bitácora.
-         *
-         * Esto es importante:
-         * antes el Worker recibía el historial,
-         * pero no la bitácora.
-         */
-
-        const respuesta =
-            await fetch(
-                WORKER_URL,
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            message:
-                                texto,
-
-                            history:
-                                historial,
-
-                            bitacora:
-                                bitacora
-
-                        })
-
-                }
+        const resultado =
+            await realizarPeticion(
+                texto,
+                historial
             );
 
 
-        let datos;
+        if (
+            !resultado.ok
+        ) {
 
-
-        try {
-
-            datos =
-                await respuesta.json();
-
-        } catch {
-
-            datos = null;
-
-        }
-
-
-        /* -----------------------------------------
-           ERROR DEL WORKER
-           ----------------------------------------- */
-
-        if (!respuesta.ok) {
-
-            console.error(
-                "Error Worker:",
-                datos
+            manejarErrorIA(
+                resultado.error
             );
-
-
-            let detalle =
-                datos
-                    ? JSON.stringify(
-                        datos
-                    )
-                    : "Sin detalles.";
-
-
-            addMessage(
-                "El núcleo devolvió un error.\n" +
-                detalle
-            );
-
 
             return;
         }
 
 
-        /* -----------------------------------------
-           RESPUESTA
-           ----------------------------------------- */
+        const datos =
+            resultado.data;
+
 
         const respuestaIA =
             datos?.reply;
@@ -812,10 +1062,6 @@ async function hablarConIA(texto) {
         }
 
 
-        /* -----------------------------------------
-           MOSTRAR RESPUESTA
-           ----------------------------------------- */
-
         addMessage(
             respuestaIA,
             "meca"
@@ -828,31 +1074,8 @@ async function hablarConIA(texto) {
         );
 
 
-        /* -----------------------------------------
-           VOZ
-           ----------------------------------------- */
-
-        if (vozActiva) {
-
-            estadoRespondiendo();
-
-            hablar(
-                respuestaIA
-            );
-
-        }
-
-
-    } catch (error) {
-
-        console.error(
-            "Error de comunicación:",
-            error
-        );
-
-
-        addMessage(
-            "No pude establecer comunicación con el núcleo de IA."
+        hablar(
+            respuestaIA
         );
 
 
@@ -862,19 +1085,7 @@ async function hablarConIA(texto) {
             false;
 
 
-        /*
-         * Si sigue hablando, no cambiamos
-         * inmediatamente el estado.
-         */
-
-        if (
-            !vozActiva ||
-            !speechSynthesis.speaking
-        ) {
-
-            estadoListo();
-
-        }
+        estadoListo();
 
     }
 }
@@ -902,7 +1113,9 @@ async function sendMessage() {
         return;
 
 
-    if (procesando)
+    if (
+        procesando
+    )
         return;
 
 
@@ -912,7 +1125,8 @@ async function sendMessage() {
     );
 
 
-    campo.value = "";
+    campo.value =
+        "";
 
 
     registrarConversacion(
@@ -922,9 +1136,11 @@ async function sendMessage() {
 
 
     /*
-     * --------------------------------------
-     * COMANDOS LOCALES
-     * --------------------------------------
+     * Primero intentamos detectar
+     * comandos locales.
+     *
+     * Solo los comandos explícitos
+     * son interceptados.
      */
 
     if (
@@ -934,20 +1150,6 @@ async function sendMessage() {
         return;
     }
 
-
-    if (
-        procesarBusqueda(texto)
-    ) {
-
-        return;
-    }
-
-
-    /*
-     * --------------------------------------
-     * IA
-     * --------------------------------------
-     */
 
     await hablarConIA(
         texto
@@ -960,7 +1162,7 @@ window.sendMessage =
 
 
 /* =========================================================
-   VOZ DE H.E.C.T.O.R.
+   VOZ
    ========================================================= */
 
 function hablar(texto) {
@@ -971,14 +1173,8 @@ function hablar(texto) {
 
     if (
         !window.speechSynthesis
-    ) {
-
-        addMessage(
-            "El navegador no dispone de síntesis de voz."
-        );
-
+    )
         return;
-    }
 
 
     speechSynthesis.cancel();
@@ -991,43 +1187,15 @@ function hablar(texto) {
 
 
     voz.lang =
-        "es-AR";
+        "es-ES";
 
 
     voz.rate =
-        0.95;
+        .95;
 
 
     voz.pitch =
-        0.82;
-
-
-    voz.volume =
-        1;
-
-
-    voz.onstart =
-        () => {
-
-            estadoRespondiendo();
-
-        };
-
-
-    voz.onend =
-        () => {
-
-            estadoListo();
-
-        };
-
-
-    voz.onerror =
-        () => {
-
-            estadoListo();
-
-        };
+        .8;
 
 
     speechSynthesis.speak(
@@ -1035,10 +1203,6 @@ function hablar(texto) {
     );
 }
 
-
-/* =========================================================
-   ACTIVAR / DESACTIVAR VOZ
-   ========================================================= */
 
 function toggleVoice() {
 
@@ -1052,63 +1216,32 @@ function toggleVoice() {
         );
 
 
-    if (vozActiva) {
+    if (
+        vozActiva
+    ) {
 
-        if (boton) {
-
+        if (boton)
             boton.textContent =
                 "◉ ON";
 
-            boton.classList.add(
-                "active"
-            );
-
-        }
-
 
         addMessage(
-            "Salida de voz activada."
+            "Voz activada."
         );
-
-
-        /*
-         * Pequeña prueba de voz.
-         */
-
-        hablar(
-            "Sistema de voz H.E.C.T.O.R. activado."
-        );
-
 
     } else {
 
-        if (boton) {
-
+        if (boton)
             boton.textContent =
                 "◉";
 
-            boton.classList.remove(
-                "active"
-            );
 
-        }
-
-
-        if (
-            window.speechSynthesis
-        ) {
-
-            speechSynthesis.cancel();
-
-        }
+        speechSynthesis.cancel();
 
 
         addMessage(
-            "Salida de voz desactivada."
+            "Voz desactivada."
         );
-
-
-        estadoListo();
 
     }
 }
@@ -1116,296 +1249,6 @@ function toggleVoice() {
 
 window.toggleVoice =
     toggleVoice;
-
-
-/* =========================================================
-   RECONOCIMIENTO DE VOZ
-   ========================================================= */
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-
-let reconocimiento =
-    null;
-
-
-if (SpeechRecognition) {
-
-    reconocimiento =
-        new SpeechRecognition();
-
-
-    reconocimiento.lang =
-        "es-AR";
-
-
-    reconocimiento.continuous =
-        false;
-
-
-    reconocimiento.interimResults =
-        false;
-
-
-    reconocimiento.onstart =
-        () => {
-
-            escuchando =
-                true;
-
-
-            estadoEscuchando();
-
-
-            const boton =
-                document.getElementById(
-                    "micButton"
-                );
-
-
-            if (boton) {
-
-                boton.textContent =
-                    "●";
-
-                boton.classList.add(
-                    "active"
-                );
-
-            }
-
-        };
-
-
-    reconocimiento.onresult =
-        event => {
-
-            const resultado =
-                event
-                    .results[0][0]
-                    .transcript;
-
-
-            const campo =
-                input();
-
-
-            if (campo) {
-
-                campo.value =
-                    resultado;
-
-            }
-
-
-            /*
-             * Mandamos automáticamente
-             * lo reconocido.
-             */
-
-            sendMessage();
-
-        };
-
-
-    reconocimiento.onerror =
-        event => {
-
-            console.error(
-                "SpeechRecognition:",
-                event.error
-            );
-
-
-            escuchando =
-                false;
-
-
-            estadoListo();
-
-        };
-
-
-    reconocimiento.onend =
-        () => {
-
-            escuchando =
-                false;
-
-
-            const boton =
-                document.getElementById(
-                    "micButton"
-                );
-
-
-            if (boton) {
-
-                boton.textContent =
-                    "🎙";
-
-                boton.classList.remove(
-                    "active"
-                );
-
-            }
-
-
-            if (!procesando) {
-
-                estadoListo();
-
-            }
-
-        };
-
-}
-
-
-/* =========================================================
-   ACTIVAR MICRÓFONO
-   ========================================================= */
-
-function toggleMicrofono() {
-
-    if (!reconocimiento) {
-
-        addMessage(
-            "El reconocimiento de voz no está disponible en este navegador."
-        );
-
-        return;
-    }
-
-
-    if (escuchando) {
-
-        reconocimiento.stop();
-
-        return;
-    }
-
-
-    try {
-
-        reconocimiento.start();
-
-    } catch (error) {
-
-        console.error(
-            "No se pudo iniciar el micrófono:",
-            error
-        );
-
-    }
-}
-
-
-window.toggleMicrofono =
-    toggleMicrofono;
-
-
-/* =========================================================
-   BOTÓN DE BÚSQUEDA
-   ========================================================= */
-
-function buscarDesdeBoton() {
-
-    const campo =
-        input();
-
-
-    if (!campo)
-        return;
-
-
-    const consulta =
-        campo.value.trim();
-
-
-    if (!consulta) {
-
-        addMessage(
-            "Escribe qué quieres buscar."
-        );
-
-        campo.focus();
-
-        return;
-    }
-
-
-    buscarGoogle(
-        consulta
-    );
-
-
-    campo.value = "";
-}
-
-
-window.buscarDesdeBoton =
-    buscarDesdeBoton;
-
-
-/* =========================================================
-   CREAR CONTROLES EXTRA
-   ========================================================= */
-
-function crearControlesExtra() {
-
-    /*
-     * No obligamos al HTML a tener los botones.
-     *
-     * Si después los agregamos manualmente,
-     * este sistema simplemente los utiliza.
-     */
-
-
-    const voiceButton =
-        document.getElementById(
-            "voiceButton"
-        );
-
-
-    if (voiceButton) {
-
-        voiceButton.onclick =
-            toggleVoice;
-
-    }
-
-
-    const micButton =
-        document.getElementById(
-            "micButton"
-        );
-
-
-    if (micButton) {
-
-        micButton.onclick =
-            toggleMicrofono;
-
-    }
-
-
-    const searchButton =
-        document.getElementById(
-            "searchButton"
-        );
-
-
-    if (searchButton) {
-
-        searchButton.onclick =
-            buscarDesdeBoton;
-
-    }
-
-}
 
 
 /* =========================================================
@@ -1433,11 +1276,11 @@ function actualizarReloj() {
             "es-AR",
             {
 
-                hour: "2-digit",
+                hour:
+                    "2-digit",
 
-                minute: "2-digit",
-
-                second: "2-digit"
+                minute:
+                    "2-digit"
 
             }
         );
@@ -1485,35 +1328,15 @@ document.addEventListener(
         }
 
 
-        crearControlesExtra();
-
-
         actualizarReloj();
 
 
         /*
-         * Restaurar conversación
-         * después de cargar la interfaz.
+         * Restauramos conversaciones
+         * anteriores.
          */
 
         restaurarConversacion();
-
-
-        estadoListo();
-
-    }
-);
-
-
-/* =========================================================
-   INICIALIZACIÓN
-   ========================================================= */
-
-window.addEventListener(
-    "load",
-    () => {
-
-        estadoListo();
 
     }
 );
