@@ -1,85 +1,368 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
 
-<title>M.E.C.A. OS</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
 
-<link rel="stylesheet" href="style.css">
+    <title>H.E.C.T.O.R. OS</title>
 
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
 <div class="hud">
 
-    <header>
-        <div class="core">
-            <div class="pulse"></div>
+    <!-- ================================================= -->
+    <!-- CABECERA -->
+    <!-- ================================================= -->
+
+    <header class="topbar">
+
+        <div class="evolution">
+            <span class="small-label">EVOLUCIÓN DEL SISTEMA</span>
+
+            <strong>
+                M.E.C.A.
+                <span>→</span>
+                H.E.C.T.O.R.
+            </strong>
         </div>
 
-        <div class="title">
-            <h1>M.E.C.A.</h1>
-            <p>Mechanics & Engineering Cognitive Assistant</p>
-            <span id="status">ONLINE</span>
+
+        <div class="brand">
+
+            <h1>H.E.C.T.O.R.</h1>
+
+            <p>
+                Hyper-intelligent Engineering Core
+                for Technical Operations &amp; Research
+            </p>
+
         </div>
+
+
+        <div class="system-status">
+
+            <span class="status-dot"></span>
+
+            <span>SYSTEM ONLINE</span>
+
+            <span id="clock">--:--</span>
+
+        </div>
+
     </header>
 
 
-    <section class="system-panel">
+    <!-- ================================================= -->
+    <!-- ZONA PRINCIPAL -->
+    <!-- ================================================= -->
 
-        <div class="box">
-            <h3>SISTEMA</h3>
-            <p>Motor cognitivo: ACTIVO</p>
-            <p>Modo: Ingeniería</p>
-            <p>Conexión: Estable</p>
-        </div>
-
-        <div class="box">
-            <h3>NÚCLEO</h3>
-            <p>Procesamiento listo</p>
-            <p>Memoria local preparada</p>
-        </div>
-
-    </section>
+    <main class="main-grid">
 
 
-    <section class="chat">
+        <!-- ================= IZQUIERDA ================= -->
 
-        <div id="messages">
+        <aside class="left-column">
 
-            <div class="message meca">
-                M.E.C.A.: Sistemas iniciados. 
-                Buenos días, Juan. ¿En qué puedo ayudarte?
+
+            <section class="panel">
+
+                <h2>▣ MÓDULOS ACTIVOS</h2>
+
+                <div class="module">
+                    <span>Asistente conversacional</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Análisis y cálculos</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Ciencia y tecnología</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Ingeniería y mecánica</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Programación</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Electrónica</span>
+                    <i></i>
+                </div>
+
+                <div class="module">
+                    <span>Bitácora</span>
+                    <i></i>
+                </div>
+
+            </section>
+
+
+            <section class="panel resources">
+
+                <h2>▣ RECURSOS</h2>
+
+                <div class="resource">
+                    <span>CPU</span>
+                    <div>
+                        <b style="width:42%"></b>
+                    </div>
+                    <strong>42%</strong>
+                </div>
+
+                <div class="resource">
+                    <span>MEM</span>
+                    <div>
+                        <b style="width:58%"></b>
+                    </div>
+                    <strong>58%</strong>
+                </div>
+
+                <div class="resource">
+                    <span>NET</span>
+                    <div>
+                        <b style="width:76%"></b>
+                    </div>
+                    <strong>76%</strong>
+                </div>
+
+            </section>
+
+
+            <section class="panel activity">
+
+                <h2>▣ ACTIVIDAD</h2>
+
+                <p>● Núcleo conversacional activo</p>
+                <p>● Memoria local preparada</p>
+                <p>● Conexión con IA estable</p>
+                <p>● Sistema actualizado</p>
+
+            </section>
+
+        </aside>
+
+
+        <!-- ================= CENTRO ================= -->
+
+        <section class="center-column">
+
+
+            <div class="core-system">
+
+                <div class="scan-line"></div>
+
+                <div class="core-ring ring-1"></div>
+                <div class="core-ring ring-2"></div>
+                <div class="core-ring ring-3"></div>
+                <div class="core-ring ring-4"></div>
+
+                <div class="core-grid"></div>
+
+                <div class="core-center">
+
+                    <div class="core-symbol">
+                        H
+                    </div>
+
+                    <span>H.E.C.T.O.R.</span>
+
+                    <small>COGNITIVE CORE</small>
+
+                </div>
+
             </div>
 
-        </div>
+
+            <!-- ESTADO -->
+
+            <div class="core-readout">
+
+                <span>CORE STATUS</span>
+
+                <strong id="coreStatus">
+                    READY
+                </strong>
+
+                <div class="readout-line"></div>
+
+                <small>
+                    ANALYSIS / REASONING / RESPONSE
+                </small>
+
+            </div>
 
 
-        <div class="input-area">
+            <!-- CHAT -->
 
-            <input 
-            id="input"
-            placeholder="Escribe a M.E.C.A..."
-            autocomplete="off">
+            <section class="chat-panel">
 
-            <button onclick="sendMessage()">
-                ENVIAR
-            </button>
+                <div class="chat-header">
 
-        </div>
+                    <span>
+                        H.E.C.T.O.R. / CONVERSATION
+                    </span>
 
-    </section>
+                    <span id="thinkingStatus">
+                        READY
+                    </span>
+
+                </div>
+
+
+                <div id="messages">
+
+                    <div class="message meca">
+
+                        <strong>H.E.C.T.O.R.</strong>
+
+                        <span>
+                            Núcleo operativo.
+                            Evolución desde M.E.C.A. completada.
+                            Buenos días, Juan. ¿Qué vamos a construir hoy?
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="input-area">
+
+                    <button
+                        id="voiceButton"
+                        class="icon-button"
+                        onclick="toggleVoice()"
+                        title="Voz"
+                    >
+                        ◉
+                    </button>
+
+
+                    <input
+                        id="input"
+                        placeholder="Comunícate con H.E.C.T.O.R..."
+                        autocomplete="off"
+                    >
+
+
+                    <button
+                        id="sendButton"
+                        onclick="sendMessage()"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+            </section>
+
+        </section>
+
+
+        <!-- ================= DERECHA ================= -->
+
+        <aside class="right-column">
+
+
+            <section class="panel">
+
+                <h2>▣ ÁREAS DE TRABAJO</h2>
+
+                <div class="area">⚙ Mecánica y diseño</div>
+                <div class="area">▣ Electrónica y circuitos</div>
+                <div class="area">◈ Física y energía</div>
+                <div class="area">π Matemáticas</div>
+                <div class="area">&lt;/&gt; Programación</div>
+                <div class="area">⌂ Automatización</div>
+                <div class="area">◇ Investigación</div>
+
+            </section>
+
+
+            <section class="panel log-panel">
+
+                <h2>▣ BITÁCORA</h2>
+
+                <p>
+                    Registro persistente de ideas,
+                    proyectos, aprendizajes y eventos.
+                </p>
+
+                <button onclick="mostrarBitacora()">
+                    ABRIR BITÁCORA
+                </button>
+
+            </section>
+
+
+            <section class="panel">
+
+                <h2>▣ PRÓXIMAMENTE</h2>
+
+                <p>○ Memoria conversacional avanzada</p>
+                <p>○ Análisis de datos</p>
+                <p>○ Generación de esquemas</p>
+                <p>○ Herramientas de ingeniería</p>
+                <p>○ Control de dispositivos</p>
+
+            </section>
+
+        </aside>
+
+    </main>
+
+
+    <!-- ================================================= -->
+    <!-- PIE -->
+    <!-- ================================================= -->
+
+    <footer>
+
+        PENSAR
+        <span>·</span>
+        ANALIZAR
+        <span>·</span>
+        CREAR
+        <span>·</span>
+        MEJORAR
+
+    </footer>
 
 
 </div>
 
-<div id="memoryAlert" class="memory-alert">
+
+<!-- ================================================= -->
+<!-- ALERTA DE MEMORIA -->
+<!-- ================================================= -->
+
+<div
+    id="memoryAlert"
+    class="memory-alert"
+>
 
     <div class="memory-box">
 
-        <h2>⚙ M.E.C.A. MEMORY ALERT</h2>
+        <h2>
+            H.E.C.T.O.R. / MEMORY
+        </h2>
 
         <p id="memoryText">
             Nuevo recuerdo detectado.
@@ -89,25 +372,28 @@
             ¿Deseas almacenarlo en la bitácora?
         </p>
 
-
         <button onclick="confirmMemory()">
             ✓ GUARDAR
         </button>
-
 
         <button onclick="cancelMemory()">
             ✕ DESCARTAR
         </button>
 
-
     </div>
 
 </div>
+
+
+<!-- ================================================= -->
+<!-- SISTEMAS -->
+<!-- ================================================= -->
+
 <script src="memory.js"></script>
-<script src="memory_manager.js"></script>    
+<script src="memory_manager.js"></script>
 <script src="knowledge.js"></script>
 <script src="meca_core.js"></script>
 <script src="app.js"></script>
 
 </body>
-                       </html>
+    </html>
