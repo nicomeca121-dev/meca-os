@@ -12,8 +12,14 @@ const CHAT_HISTORY_KEY =
 const BITACORA_KEY =
     "meca_bitacora";
 
+
+/* =========================================================
+   ESTADO DEL SISTEMA
+   ========================================================= */
+
 let procesando = false;
 let vozActiva = false;
+let escuchando = false;
 
 
 /* =========================================================
@@ -66,19 +72,23 @@ function addMessage(texto, tipo = "meca") {
         nombre.textContent =
             "H.E.C.T.O.R.";
 
+
         const contenido =
             document.createElement("span");
 
         contenido.textContent =
             texto;
 
+
         mensaje.appendChild(nombre);
+
         mensaje.appendChild(contenido);
 
     } else {
 
         mensaje.textContent =
             texto;
+
     }
 
 
@@ -102,10 +112,14 @@ function obtenerHistorial() {
                 CHAT_HISTORY_KEY
             );
 
-        if (!datos) return [];
+
+        if (!datos)
+            return [];
+
 
         const historial =
             JSON.parse(datos);
+
 
         return Array.isArray(historial)
             ? historial
@@ -114,6 +128,7 @@ function obtenerHistorial() {
     } catch {
 
         return [];
+
     }
 }
 
@@ -121,13 +136,12 @@ function obtenerHistorial() {
 function guardarHistorial(historial) {
 
     /*
-     * Conservamos los últimos 16 mensajes.
-     * Esto evita que el navegador acumule
-     * una cantidad gigantesca de información.
+     * Conservamos los últimos 20 mensajes.
      */
 
     const limitado =
-        historial.slice(-16);
+        historial.slice(-20);
+
 
     localStorage.setItem(
         CHAT_HISTORY_KEY,
@@ -144,6 +158,7 @@ function registrarConversacion(
     const historial =
         obtenerHistorial();
 
+
     historial.push({
 
         role: role,
@@ -154,6 +169,7 @@ function registrarConversacion(
             Date.now()
 
     });
+
 
     guardarHistorial(
         historial
@@ -174,26 +190,26 @@ function restaurarConversacion() {
     if (
         historial.length === 0
     ) {
+
         return;
+
     }
 
 
     const caja =
         messages();
 
-    if (!caja) return;
 
+    if (!caja)
+        return;
 
-    /*
-     * Dejamos el mensaje inicial
-     * del sistema y añadimos el historial.
-     */
 
     historial.forEach(
         mensaje => {
 
             if (
-                mensaje.role === "user"
+                mensaje.role ===
+                "user"
             ) {
 
                 addMessage(
@@ -207,6 +223,7 @@ function restaurarConversacion() {
                     mensaje.text,
                     "meca"
                 );
+
             }
 
         }
@@ -222,15 +239,28 @@ function obtenerBitacora() {
 
     try {
 
-        return JSON.parse(
+        const datos =
             localStorage.getItem(
                 BITACORA_KEY
-            )
-        ) || [];
+            );
+
+
+        if (!datos)
+            return [];
+
+
+        const notas =
+            JSON.parse(datos);
+
+
+        return Array.isArray(notas)
+            ? notas
+            : [];
 
     } catch {
 
         return [];
+
     }
 }
 
@@ -275,6 +305,7 @@ function mostrarBitacora() {
         );
 
         return;
+
     }
 
 
@@ -309,10 +340,15 @@ function procesarBitacora(texto) {
         normalizar(texto);
 
 
+    /* -----------------------------------------
+       VER BITÁCORA
+       ----------------------------------------- */
+
     if (
         limpio === "ver bitacora" ||
         limpio === "bitacora" ||
-        limpio === "ver notas"
+        limpio === "ver notas" ||
+        limpio === "mostrar bitacora"
     ) {
 
         mostrarBitacora();
@@ -321,11 +357,58 @@ function procesarBitacora(texto) {
     }
 
 
+    /* -----------------------------------------
+       BORRAR BITÁCORA
+       ----------------------------------------- */
+
+    if (
+        limpio === "borrar bitacora" ||
+        limpio === "vaciar bitacora"
+    ) {
+
+        const confirmar =
+            confirm(
+                "¿Seguro que quieres borrar toda la bitácora?"
+            );
+
+
+        if (confirmar) {
+
+            localStorage.removeItem(
+                BITACORA_KEY
+            );
+
+
+            addMessage(
+                "Bitácora eliminada."
+            );
+
+        } else {
+
+            addMessage(
+                "Operación cancelada."
+            );
+
+        }
+
+
+        return true;
+    }
+
+
+    /* -----------------------------------------
+       GUARDAR NOTA
+       ----------------------------------------- */
+
     const patrones = [
+
         "meca anota ",
         "hector anota ",
+        "h.e.c.t.o.r. anota ",
         "anota ",
-        "guarda "
+        "guarda ",
+        "guardar "
+
     ];
 
 
@@ -361,6 +444,7 @@ function procesarBitacora(texto) {
                 );
 
                 return true;
+
             }
 
 
@@ -382,15 +466,131 @@ function procesarBitacora(texto) {
 
 
 /* =========================================================
-   ESTADO VISUAL
+   BÚSQUEDA EN GOOGLE
    ========================================================= */
 
-function estadoProcesando() {
+function buscarGoogle(consulta) {
+
+    if (!consulta)
+        return;
+
+
+    consulta =
+        consulta.trim();
+
+
+    if (!consulta)
+        return;
+
+
+    const url =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(
+            consulta
+        );
+
+
+    window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+    );
+
+
+    addMessage(
+        `Abriendo búsqueda: ${consulta}`
+    );
+}
+
+
+window.buscarGoogle =
+    buscarGoogle;
+
+
+/* =========================================================
+   COMANDO "BUSCAR"
+   ========================================================= */
+
+function procesarBusqueda(texto) {
+
+    const limpio =
+        normalizar(texto);
+
+
+    const patrones = [
+
+        "buscar ",
+        "busca ",
+        "google ",
+        "busca en google "
+
+    ];
+
+
+    for (
+        const patron of patrones
+    ) {
+
+        if (
+            limpio.startsWith(patron)
+        ) {
+
+            const posicion =
+                texto
+                    .toLowerCase()
+                    .indexOf(
+                        patron
+                    );
+
+
+            const consulta =
+                texto
+                    .substring(
+                        posicion +
+                        patron.length
+                    )
+                    .trim();
+
+
+            if (!consulta) {
+
+                addMessage(
+                    "¿Qué quieres que busque?"
+                );
+
+                return true;
+
+            }
+
+
+            buscarGoogle(
+                consulta
+            );
+
+
+            return true;
+        }
+    }
+
+
+    return false;
+}
+
+
+/* =========================================================
+   ESTADOS DEL HUD
+   ========================================================= */
+
+function establecerEstado(
+    estado,
+    secundario = ""
+) {
 
     const status =
         document.getElementById(
             "thinkingStatus"
         );
+
 
     const core =
         document.getElementById(
@@ -398,38 +598,85 @@ function estadoProcesando() {
         );
 
 
+    const systemStatus =
+        document.getElementById(
+            "systemStatus"
+        );
+
+
     if (status)
         status.textContent =
-            "PROCESSING";
+            estado;
 
 
     if (core)
         core.textContent =
-            "ANALYZING";
+            secundario ||
+            estado;
+
+
+    if (systemStatus)
+        systemStatus.textContent =
+            estado;
+
+
+    /*
+     * Permite que CSS pueda reaccionar
+     * al estado del sistema.
+     */
+
+    document.body.dataset.hectorState =
+        estado.toLowerCase();
+
+
+    const coreElement =
+        document.querySelector(
+            ".core"
+        );
+
+
+    if (coreElement) {
+
+        coreElement.dataset.state =
+            estado.toLowerCase();
+
+    }
 }
 
 
 function estadoListo() {
 
-    const status =
-        document.getElementById(
-            "thinkingStatus"
-        );
-
-    const core =
-        document.getElementById(
-            "coreStatus"
-        );
+    establecerEstado(
+        "READY",
+        "ONLINE"
+    );
+}
 
 
-    if (status)
-        status.textContent =
-            "READY";
+function estadoProcesando() {
+
+    establecerEstado(
+        "PROCESSING",
+        "ANALYZING"
+    );
+}
 
 
-    if (core)
-        core.textContent =
-            "READY";
+function estadoEscuchando() {
+
+    establecerEstado(
+        "LISTENING",
+        "AUDIO INPUT"
+    );
+}
+
+
+function estadoRespondiendo() {
+
+    establecerEstado(
+        "RESPONDING",
+        "VOICE OUTPUT"
+    );
 }
 
 
@@ -443,7 +690,9 @@ async function hablarConIA(texto) {
         return;
 
 
-    procesando = true;
+    procesando =
+        true;
+
 
     estadoProcesando();
 
@@ -454,6 +703,18 @@ async function hablarConIA(texto) {
             obtenerHistorial();
 
 
+        const bitacora =
+            obtenerBitacora();
+
+
+        /*
+         * Mandamos tanto historial como bitácora.
+         *
+         * Esto es importante:
+         * antes el Worker recibía el historial,
+         * pero no la bitácora.
+         */
+
         const respuesta =
             await fetch(
                 WORKER_URL,
@@ -462,26 +723,48 @@ async function hablarConIA(texto) {
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
 
-                    body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                        message: texto,
+                            message:
+                                texto,
 
-                        history:
-                            historial
+                            history:
+                                historial,
 
-                    })
+                            bitacora:
+                                bitacora
+
+                        })
 
                 }
             );
 
 
-        const datos =
-            await respuesta.json();
+        let datos;
 
+
+        try {
+
+            datos =
+                await respuesta.json();
+
+        } catch {
+
+            datos = null;
+
+        }
+
+
+        /* -----------------------------------------
+           ERROR DEL WORKER
+           ----------------------------------------- */
 
         if (!respuesta.ok) {
 
@@ -492,9 +775,11 @@ async function hablarConIA(texto) {
 
 
             let detalle =
-                JSON.stringify(
-                    datos
-                );
+                datos
+                    ? JSON.stringify(
+                        datos
+                    )
+                    : "Sin detalles.";
 
 
             addMessage(
@@ -507,8 +792,12 @@ async function hablarConIA(texto) {
         }
 
 
+        /* -----------------------------------------
+           RESPUESTA
+           ----------------------------------------- */
+
         const respuestaIA =
-            datos.reply;
+            datos?.reply;
 
 
         if (
@@ -523,6 +812,10 @@ async function hablarConIA(texto) {
         }
 
 
+        /* -----------------------------------------
+           MOSTRAR RESPUESTA
+           ----------------------------------------- */
+
         addMessage(
             respuestaIA,
             "meca"
@@ -535,29 +828,53 @@ async function hablarConIA(texto) {
         );
 
 
-        hablar(
-            respuestaIA
-        );
+        /* -----------------------------------------
+           VOZ
+           ----------------------------------------- */
+
+        if (vozActiva) {
+
+            estadoRespondiendo();
+
+            hablar(
+                respuestaIA
+            );
+
+        }
 
 
     } catch (error) {
 
         console.error(
-            "Error:",
+            "Error de comunicación:",
             error
         );
 
 
         addMessage(
-            "No pude establecer comunicación con el núcleo."
+            "No pude establecer comunicación con el núcleo de IA."
         );
+
 
     } finally {
 
         procesando =
             false;
 
-        estadoListo();
+
+        /*
+         * Si sigue hablando, no cambiamos
+         * inmediatamente el estado.
+         */
+
+        if (
+            !vozActiva ||
+            !speechSynthesis.speaking
+        ) {
+
+            estadoListo();
+
+        }
 
     }
 }
@@ -605,7 +922,9 @@ async function sendMessage() {
 
 
     /*
-     * Comandos locales
+     * --------------------------------------
+     * COMANDOS LOCALES
+     * --------------------------------------
      */
 
     if (
@@ -615,6 +934,20 @@ async function sendMessage() {
         return;
     }
 
+
+    if (
+        procesarBusqueda(texto)
+    ) {
+
+        return;
+    }
+
+
+    /*
+     * --------------------------------------
+     * IA
+     * --------------------------------------
+     */
 
     await hablarConIA(
         texto
@@ -627,7 +960,7 @@ window.sendMessage =
 
 
 /* =========================================================
-   VOZ
+   VOZ DE H.E.C.T.O.R.
    ========================================================= */
 
 function hablar(texto) {
@@ -638,8 +971,14 @@ function hablar(texto) {
 
     if (
         !window.speechSynthesis
-    )
+    ) {
+
+        addMessage(
+            "El navegador no dispone de síntesis de voz."
+        );
+
         return;
+    }
 
 
     speechSynthesis.cancel();
@@ -652,13 +991,43 @@ function hablar(texto) {
 
 
     voz.lang =
-        "es-ES";
+        "es-AR";
+
 
     voz.rate =
-        .95;
+        0.95;
+
 
     voz.pitch =
-        .8;
+        0.82;
+
+
+    voz.volume =
+        1;
+
+
+    voz.onstart =
+        () => {
+
+            estadoRespondiendo();
+
+        };
+
+
+    voz.onend =
+        () => {
+
+            estadoListo();
+
+        };
+
+
+    voz.onerror =
+        () => {
+
+            estadoListo();
+
+        };
 
 
     speechSynthesis.speak(
@@ -666,6 +1035,10 @@ function hablar(texto) {
     );
 }
 
+
+/* =========================================================
+   ACTIVAR / DESACTIVAR VOZ
+   ========================================================= */
 
 function toggleVoice() {
 
@@ -681,34 +1054,358 @@ function toggleVoice() {
 
     if (vozActiva) {
 
-        if (boton)
+        if (boton) {
+
             boton.textContent =
                 "◉ ON";
 
+            boton.classList.add(
+                "active"
+            );
+
+        }
+
 
         addMessage(
-            "Voz activada."
+            "Salida de voz activada."
         );
+
+
+        /*
+         * Pequeña prueba de voz.
+         */
+
+        hablar(
+            "Sistema de voz H.E.C.T.O.R. activado."
+        );
+
 
     } else {
 
-        if (boton)
+        if (boton) {
+
             boton.textContent =
                 "◉";
 
+            boton.classList.remove(
+                "active"
+            );
 
-        speechSynthesis.cancel();
+        }
+
+
+        if (
+            window.speechSynthesis
+        ) {
+
+            speechSynthesis.cancel();
+
+        }
 
 
         addMessage(
-            "Voz desactivada."
+            "Salida de voz desactivada."
         );
+
+
+        estadoListo();
+
     }
 }
 
 
 window.toggleVoice =
     toggleVoice;
+
+
+/* =========================================================
+   RECONOCIMIENTO DE VOZ
+   ========================================================= */
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+let reconocimiento =
+    null;
+
+
+if (SpeechRecognition) {
+
+    reconocimiento =
+        new SpeechRecognition();
+
+
+    reconocimiento.lang =
+        "es-AR";
+
+
+    reconocimiento.continuous =
+        false;
+
+
+    reconocimiento.interimResults =
+        false;
+
+
+    reconocimiento.onstart =
+        () => {
+
+            escuchando =
+                true;
+
+
+            estadoEscuchando();
+
+
+            const boton =
+                document.getElementById(
+                    "micButton"
+                );
+
+
+            if (boton) {
+
+                boton.textContent =
+                    "●";
+
+                boton.classList.add(
+                    "active"
+                );
+
+            }
+
+        };
+
+
+    reconocimiento.onresult =
+        event => {
+
+            const resultado =
+                event
+                    .results[0][0]
+                    .transcript;
+
+
+            const campo =
+                input();
+
+
+            if (campo) {
+
+                campo.value =
+                    resultado;
+
+            }
+
+
+            /*
+             * Mandamos automáticamente
+             * lo reconocido.
+             */
+
+            sendMessage();
+
+        };
+
+
+    reconocimiento.onerror =
+        event => {
+
+            console.error(
+                "SpeechRecognition:",
+                event.error
+            );
+
+
+            escuchando =
+                false;
+
+
+            estadoListo();
+
+        };
+
+
+    reconocimiento.onend =
+        () => {
+
+            escuchando =
+                false;
+
+
+            const boton =
+                document.getElementById(
+                    "micButton"
+                );
+
+
+            if (boton) {
+
+                boton.textContent =
+                    "🎙";
+
+                boton.classList.remove(
+                    "active"
+                );
+
+            }
+
+
+            if (!procesando) {
+
+                estadoListo();
+
+            }
+
+        };
+
+}
+
+
+/* =========================================================
+   ACTIVAR MICRÓFONO
+   ========================================================= */
+
+function toggleMicrofono() {
+
+    if (!reconocimiento) {
+
+        addMessage(
+            "El reconocimiento de voz no está disponible en este navegador."
+        );
+
+        return;
+    }
+
+
+    if (escuchando) {
+
+        reconocimiento.stop();
+
+        return;
+    }
+
+
+    try {
+
+        reconocimiento.start();
+
+    } catch (error) {
+
+        console.error(
+            "No se pudo iniciar el micrófono:",
+            error
+        );
+
+    }
+}
+
+
+window.toggleMicrofono =
+    toggleMicrofono;
+
+
+/* =========================================================
+   BOTÓN DE BÚSQUEDA
+   ========================================================= */
+
+function buscarDesdeBoton() {
+
+    const campo =
+        input();
+
+
+    if (!campo)
+        return;
+
+
+    const consulta =
+        campo.value.trim();
+
+
+    if (!consulta) {
+
+        addMessage(
+            "Escribe qué quieres buscar."
+        );
+
+        campo.focus();
+
+        return;
+    }
+
+
+    buscarGoogle(
+        consulta
+    );
+
+
+    campo.value = "";
+}
+
+
+window.buscarDesdeBoton =
+    buscarDesdeBoton;
+
+
+/* =========================================================
+   CREAR CONTROLES EXTRA
+   ========================================================= */
+
+function crearControlesExtra() {
+
+    /*
+     * No obligamos al HTML a tener los botones.
+     *
+     * Si después los agregamos manualmente,
+     * este sistema simplemente los utiliza.
+     */
+
+
+    const voiceButton =
+        document.getElementById(
+            "voiceButton"
+        );
+
+
+    if (voiceButton) {
+
+        voiceButton.onclick =
+            toggleVoice;
+
+    }
+
+
+    const micButton =
+        document.getElementById(
+            "micButton"
+        );
+
+
+    if (micButton) {
+
+        micButton.onclick =
+            toggleMicrofono;
+
+    }
+
+
+    const searchButton =
+        document.getElementById(
+            "searchButton"
+        );
+
+
+    if (searchButton) {
+
+        searchButton.onclick =
+            buscarDesdeBoton;
+
+    }
+
+}
 
 
 /* =========================================================
@@ -735,8 +1432,13 @@ function actualizarReloj() {
         ahora.toLocaleTimeString(
             "es-AR",
             {
+
                 hour: "2-digit",
-                minute: "2-digit"
+
+                minute: "2-digit",
+
+                second: "2-digit"
+
             }
         );
 }
@@ -774,6 +1476,7 @@ document.addEventListener(
                         event.preventDefault();
 
                         sendMessage();
+
                     }
 
                 }
@@ -782,7 +1485,35 @@ document.addEventListener(
         }
 
 
+        crearControlesExtra();
+
+
         actualizarReloj();
+
+
+        /*
+         * Restaurar conversación
+         * después de cargar la interfaz.
+         */
+
+        restaurarConversacion();
+
+
+        estadoListo();
+
+    }
+);
+
+
+/* =========================================================
+   INICIALIZACIÓN
+   ========================================================= */
+
+window.addEventListener(
+    "load",
+    () => {
+
+        estadoListo();
 
     }
 );
