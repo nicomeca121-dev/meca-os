@@ -1,68 +1,157 @@
+/* =========================================================
+   H.E.C.T.O.R. OS
+   HUD INTERFACE
+   ========================================================= */
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+
 :root {
-    --cyan: #00d9ff;
+
+    --cyan: #00eaff;
+    --cyan-soft: #62dfff;
     --blue: #168cff;
-    --deep: #020811;
-    --panel: rgba(3, 18, 31, .82);
-    --line: rgba(0, 217, 255, .35);
-    --text: #b9ecff;
-    --muted: #6191a8;
+    --blue-deep: #063b66;
+
+    --green: #48ffb0;
+    --yellow: #ffe56b;
+
+    --bg: #01050a;
+    --bg-blue: #03131e;
+
+    --panel: rgba(3, 18, 30, .72);
+
+    --line:
+        rgba(0, 225, 255, .28);
+
+    --line-bright:
+        rgba(0, 225, 255, .65);
+
+    --text:
+        #c9f6ff;
+
+    --muted:
+        #5d8ea3;
+
+    --shadow:
+        rgba(0, 220, 255, .16);
 }
+
+
+/* =========================================================
+   BASE
+   ========================================================= */
 
 html,
 body {
+
     width: 100%;
     min-height: 100%;
+
 }
+
 
 body {
 
     background:
+
         radial-gradient(
             circle at 50% 42%,
-            rgba(0, 155, 255, .16),
-            transparent 32%
+            rgba(0, 174, 255, .13),
+            transparent 30%
         ),
+
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(0, 100, 180, .08),
+            transparent 55%
+        ),
+
         linear-gradient(
             135deg,
-            #010307,
-            #03111c 50%,
-            #01050a
+            #000204,
+            #03111b 50%,
+            #00050a
         );
 
-    color: var(--text);
+    color:
+        var(--text);
 
     font-family:
         "Courier New",
         monospace;
 
-    overflow-x: hidden;
+    overflow-x:
+        hidden;
+
 }
 
 
-/* =====================================================
+/* =========================================================
+   SCANLINES GLOBALES
+   ========================================================= */
+
+body::before {
+
+    content:
+        "";
+
+    position:
+        fixed;
+
+    inset:
+        0;
+
+    pointer-events:
+        none;
+
+    z-index:
+        999;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,.012) 0px,
+            rgba(255,255,255,.012) 1px,
+            transparent 1px,
+            transparent 4px
+        );
+
+    opacity:
+        .22;
+
+}
+
+
+/* =========================================================
    HUD
-   ===================================================== */
+   ========================================================= */
 
 .hud {
 
-    min-height: 100vh;
+    min-height:
+        100vh;
 
     padding:
         14px;
 
-    position: relative;
+    position:
+        relative;
+
+    overflow:
+        hidden;
 
     background-image:
+
         linear-gradient(
             rgba(0, 217, 255, .025) 1px,
             transparent 1px
         ),
+
         linear-gradient(
             90deg,
             rgba(0, 217, 255, .025) 1px,
@@ -70,27 +159,83 @@ body {
         );
 
     background-size:
-        40px 40px;
+        42px 42px;
 
 }
 
 
-/* =====================================================
+/* =========================================================
+   DECORACIÓN HUD
+   ========================================================= */
+
+.hud::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    inset:
+        12px;
+
+    border:
+        1px solid
+        rgba(0, 217, 255, .08);
+
+    pointer-events:
+        none;
+
+}
+
+
+.hud::after {
+
+    content:
+        "H.E.C.T.O.R. // SYSTEM INTERFACE";
+
+    position:
+        absolute;
+
+    right:
+        25px;
+
+    bottom:
+        9px;
+
+    font-size:
+        7px;
+
+    letter-spacing:
+        3px;
+
+    color:
+        rgba(0, 217, 255, .22);
+
+}
+
+
+/* =========================================================
    TOPBAR
-   ===================================================== */
+   ========================================================= */
 
 .topbar {
 
-    display: grid;
+    display:
+        grid;
 
     grid-template-columns:
         1fr 2fr 1fr;
 
-    align-items: center;
+    align-items:
+        center;
 
-    gap: 15px;
+    gap:
+        12px;
 
-    margin-bottom: 15px;
+    margin-bottom:
+        12px;
+
 }
 
 
@@ -98,43 +243,87 @@ body {
 .system-status,
 .brand {
 
-    border: 1px solid var(--line);
+    border:
+        1px solid
+        var(--line);
 
     background:
+
         linear-gradient(
             135deg,
-            rgba(0, 217, 255, .09),
-            rgba(0, 0, 0, .3)
+            rgba(0, 217, 255, .075),
+            rgba(0, 0, 0, .32)
         );
 
     box-shadow:
-        0 0 18px
-        rgba(0, 217, 255, .09);
+        inset 0 0 20px rgba(0, 190, 255, .025),
+        0 0 18px rgba(0, 217, 255, .05);
 
-    padding: 13px;
+    padding:
+        12px;
+
+    position:
+        relative;
+
+}
+
+
+.evolution::before,
+.system-status::before,
+.brand::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    top:
+        -1px;
+
+    left:
+        18px;
+
+    width:
+        35px;
+
+    height:
+        1px;
+
+    background:
+        var(--cyan);
+
+    box-shadow:
+        0 0 8px var(--cyan);
 
 }
 
 
 .evolution {
 
-    display: flex;
+    display:
+        flex;
 
-    flex-direction: column;
+    flex-direction:
+        column;
 
-    gap: 6px;
+    gap:
+        6px;
+
 }
 
 
 .small-label {
 
-    font-size: 9px;
+    font-size:
+        8px;
 
     color:
         var(--muted);
 
     letter-spacing:
         2px;
+
 }
 
 
@@ -144,10 +333,11 @@ body {
         var(--cyan);
 
     font-size:
-        13px;
+        12px;
 
     letter-spacing:
         1px;
+
 }
 
 
@@ -158,15 +348,17 @@ body {
 
     margin:
         0 5px;
+
 }
 
 
 .brand {
 
-    text-align: center;
+    text-align:
+        center;
 
     border-color:
-        rgba(0, 217, 255, .6);
+        rgba(0, 217, 255, .5);
 
 }
 
@@ -174,17 +366,17 @@ body {
 .brand h1 {
 
     color:
-        #d9f9ff;
+        #e5fbff;
 
     font-size:
-        clamp(28px, 5vw, 48px);
+        clamp(28px, 4vw, 46px);
 
     letter-spacing:
         8px;
 
     text-shadow:
-        0 0 15px
-        rgba(0, 217, 255, .8);
+        0 0 12px rgba(0, 217, 255, .8),
+        0 0 35px rgba(0, 217, 255, .2);
 
 }
 
@@ -192,144 +384,204 @@ body {
 .brand p {
 
     margin-top:
-        5px;
+        4px;
 
     font-size:
-        10px;
+        9px;
 
     color:
-        #68c9ec;
+        #5fbcd7;
+
+    letter-spacing:
+        .5px;
 
 }
 
 
 .system-status {
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
     justify-content:
         center;
 
-    gap: 9px;
+    gap:
+        8px;
 
     color:
-        #6fffc2;
+        var(--green);
 
     font-size:
-        11px;
+        10px;
+
 }
 
 
 .status-dot {
 
-    width: 9px;
-    height: 9px;
+    width:
+        8px;
+
+    height:
+        8px;
 
     background:
-        #29ff9c;
+        var(--green);
 
-    border-radius: 50%;
+    border-radius:
+        50%;
 
     box-shadow:
-        0 0 12px
-        #29ff9c;
+        0 0 12px var(--green);
+
+    animation:
+        statusPulse 2s ease-in-out infinite;
 
 }
 
 
-/* =====================================================
+/* =========================================================
    GRID PRINCIPAL
-   ===================================================== */
+   ========================================================= */
 
 .main-grid {
 
-    display: grid;
+    display:
+        grid;
 
     grid-template-columns:
-        minmax(180px, .8fr)
-        minmax(320px, 1.7fr)
-        minmax(180px, .8fr);
+        minmax(190px, .8fr)
+        minmax(400px, 1.8fr)
+        minmax(190px, .8fr);
 
-    gap: 15px;
+    gap:
+        12px;
 
     max-width:
-        1500px;
+        1550px;
 
     margin:
         auto;
+
 }
 
 
 .left-column,
 .right-column {
 
-    display: flex;
+    display:
+        flex;
 
-    flex-direction: column;
+    flex-direction:
+        column;
 
-    gap: 15px;
+    gap:
+        12px;
+
 }
 
 
-/* =====================================================
+/* =========================================================
    PANELES
-   ===================================================== */
+   ========================================================= */
 
 .panel {
 
     background:
+
         linear-gradient(
             145deg,
-            rgba(4, 25, 40, .88),
-            rgba(1, 7, 13, .92)
+            rgba(4, 28, 43, .78),
+            rgba(1, 7, 13, .86)
         );
 
     border:
         1px solid
-        rgba(0, 217, 255, .3);
+        var(--line);
 
     padding:
-        14px;
+        13px;
 
     box-shadow:
+
         inset 0 0 25px
-        rgba(0, 180, 255, .035),
-        0 0 12px
-        rgba(0, 180, 255, .05);
+        rgba(0, 180, 255, .025),
+
+        0 0 14px
+        rgba(0, 180, 255, .035);
 
     position:
         relative;
+
+    overflow:
+        hidden;
 
 }
 
 
 .panel::before {
 
-    content: "";
+    content:
+        "";
 
-    position: absolute;
+    position:
+        absolute;
 
-    left: 0;
-    top: 0;
+    top:
+        0;
 
-    width: 35px;
-    height: 2px;
+    left:
+        0;
+
+    width:
+        42px;
+
+    height:
+        2px;
 
     background:
         var(--cyan);
 
     box-shadow:
-        0 0 8px
+        0 0 9px var(--cyan);
+
+}
+
+
+.panel::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    bottom:
+        0;
+
+    right:
+        0;
+
+    width:
+        25px;
+
+    height:
+        1px;
+
+    background:
         var(--cyan);
+
 }
 
 
 .panel h2 {
 
     font-size:
-        12px;
+        10px;
 
     color:
         var(--cyan);
@@ -338,19 +590,22 @@ body {
         2px;
 
     margin-bottom:
-        15px;
+        14px;
+
 }
 
 
-/* =====================================================
-   MÓDULOS
-   ===================================================== */
+/* =========================================================
+   MODULES
+   ========================================================= */
 
 .module {
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
     justify-content:
         space-between;
@@ -360,107 +615,130 @@ body {
 
     border-bottom:
         1px solid
-        rgba(0, 217, 255, .08);
-
-    font-size:
-        11px;
-}
-
-
-.module i {
-
-    width: 7px;
-    height: 7px;
-
-    border-radius: 50%;
-
-    background:
-        #25ffa1;
-
-    box-shadow:
-        0 0 8px
-        #25ffa1;
-}
-
-
-/* =====================================================
-   RECURSOS
-   ===================================================== */
-
-.resource {
-
-    display: grid;
-
-    grid-template-columns:
-        35px 1fr 35px;
-
-    gap: 8px;
-
-    align-items: center;
-
-    margin:
-        12px 0;
-
-    font-size:
-        10px;
-}
-
-
-.resource div {
-
-    height:
-        7px;
-
-    background:
-        rgba(255,255,255,.08);
-
-    overflow: hidden;
-}
-
-
-.resource b {
-
-    display: block;
-
-    height: 100%;
-
-    background:
-        linear-gradient(
-            90deg,
-            var(--blue),
-            var(--cyan)
-        );
-
-    box-shadow:
-        0 0 8px
-        var(--cyan);
-}
-
-
-/* =====================================================
-   ACTIVIDAD
-   ===================================================== */
-
-.activity p {
+        rgba(0, 217, 255, .07);
 
     font-size:
         10px;
 
     color:
-        #78b9d0;
+        #9fd6e8;
 
-    margin:
-        9px 0;
 }
 
 
-/* =====================================================
+.module i {
+
+    width:
+        6px;
+
+    height:
+        6px;
+
+    border-radius:
+        50%;
+
+    background:
+        var(--green);
+
+    box-shadow:
+        0 0 8px var(--green);
+
+}
+
+
+/* =========================================================
+   SYSTEM READOUT
+   ========================================================= */
+
+.system-readout {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:
+        8px;
+
+}
+
+
+.system-readout div {
+
+    border:
+        1px solid
+        rgba(0, 217, 255, .1);
+
+    padding:
+        8px;
+
+    background:
+        rgba(0, 217, 255, .025);
+
+}
+
+
+.system-readout span {
+
+    display:
+        block;
+
+    font-size:
+        7px;
+
+    color:
+        var(--muted);
+
+    letter-spacing:
+        1px;
+
+}
+
+
+.system-readout strong {
+
+    display:
+        block;
+
+    margin-top:
+        4px;
+
+    color:
+        var(--green);
+
+    font-size:
+        9px;
+
+}
+
+
+/* =========================================================
+   ACTIVIDAD
+   ========================================================= */
+
+.activity p {
+
+    font-size:
+        9px;
+
+    color:
+        #72b1c8;
+
+    margin:
+        9px 0;
+
+}
+
+
+/* =========================================================
    CENTRO
-   ===================================================== */
+   ========================================================= */
 
 .center-column {
 
-    min-width: 0;
+    min-width:
+        0;
 
     display:
         flex;
@@ -470,26 +748,27 @@ body {
 
     align-items:
         center;
+
 }
 
 
-/* =====================================================
-   NÚCLEO
-   ===================================================== */
+/* =========================================================
+   CORE SYSTEM
+   ========================================================= */
 
 .core-system {
 
     width:
-        min(46vw, 510px);
+        min(45vw, 500px);
 
     height:
-        min(46vw, 510px);
+        min(45vw, 500px);
 
     min-width:
-        280px;
+        290px;
 
     min-height:
-        280px;
+        290px;
 
     position:
         relative;
@@ -504,10 +783,52 @@ body {
         center;
 
     margin:
-        15px auto;
+        8px auto 3px;
 
 }
 
+
+/* =========================================================
+   CORE HALO
+   ========================================================= */
+
+.core-system::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    width:
+        72%;
+
+    height:
+        72%;
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(0, 210, 255, .16),
+            rgba(0, 100, 180, .04) 45%,
+            transparent 72%
+        );
+
+    filter:
+        blur(2px);
+
+    animation:
+        coreBreath 3s ease-in-out infinite;
+
+}
+
+
+/* =========================================================
+   RINGS
+   ========================================================= */
 
 .core-ring {
 
@@ -523,68 +844,157 @@ body {
 
     box-shadow:
         0 0 12px
-        rgba(0,217,255,.4);
+        rgba(0, 217, 255, .28);
 
 }
 
 
+/* OUTER */
+
 .ring-1 {
 
-    width: 94%;
-    height: 94%;
+    width:
+        96%;
+
+    height:
+        96%;
 
     border-style:
         dashed;
 
+    opacity:
+        .38;
+
     animation:
-        spin 22s linear infinite;
+        spin 30s linear infinite;
+
 }
 
+
+/* SECOND */
 
 .ring-2 {
 
-    width: 76%;
-    height: 76%;
+    width:
+        79%;
+
+    height:
+        79%;
 
     border-width:
-        3px;
+        2px;
 
-    border-left-color:
+    border-top-color:
         transparent;
 
-    border-right-color:
+    border-bottom-color:
         transparent;
+
+    opacity:
+        .7;
 
     animation:
-        spinReverse 13s linear infinite;
+        spinReverse 17s linear infinite;
+
 }
 
 
+/* THIRD */
+
 .ring-3 {
 
-    width: 58%;
-    height: 58%;
+    width:
+        62%;
+
+    height:
+        62%;
 
     border-style:
         dotted;
 
+    opacity:
+        .55;
+
     animation:
-        spin 9s linear infinite;
+        spin 11s linear infinite;
+
 }
 
+
+/* INNER */
 
 .ring-4 {
 
-    width: 39%;
-    height: 39%;
+    width:
+        43%;
+
+    height:
+        43%;
 
     border-width:
-        3px;
+        2px;
+
+    opacity:
+        .9;
 
     animation:
         pulse 2.5s ease-in-out infinite;
+
 }
 
+
+/* =========================================================
+   RADAR TICKS
+   ========================================================= */
+
+.core-system::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    width:
+        90%;
+
+    height:
+        90%;
+
+    border-radius:
+        50%;
+
+    background:
+
+        repeating-conic-gradient(
+            from 0deg,
+            rgba(0, 217, 255, .28) 0deg,
+            rgba(0, 217, 255, .28) 1deg,
+            transparent 1deg,
+            transparent 15deg
+        );
+
+    mask:
+        radial-gradient(
+            circle,
+            transparent 78%,
+            black 79%,
+            black 80%,
+            transparent 81%
+        );
+
+    opacity:
+        .45;
+
+    animation:
+        spinReverse 60s linear infinite;
+
+}
+
+
+/* =========================================================
+   GRID
+   ========================================================= */
 
 .core-grid {
 
@@ -592,51 +1002,60 @@ body {
         absolute;
 
     width:
-        52%;
+        58%;
 
     height:
-        52%;
+        58%;
 
     border-radius:
         50%;
 
     background-image:
+
         linear-gradient(
-            rgba(0,217,255,.12) 1px,
+            rgba(0,217,255,.1) 1px,
             transparent 1px
         ),
+
         linear-gradient(
             90deg,
-            rgba(0,217,255,.12) 1px,
+            rgba(0,217,255,.1) 1px,
             transparent 1px
         );
 
     background-size:
-        14px 14px;
+        15px 15px;
 
     mask-image:
         radial-gradient(
             circle,
-            black 30%,
+            black 15%,
             transparent 70%
         );
+
+    opacity:
+        .65;
 
 }
 
 
+/* =========================================================
+   CORE CENTER
+   ========================================================= */
+
 .core-center {
 
     width:
-        28%;
+        29%;
 
     height:
-        28%;
+        29%;
 
     min-width:
-        110px;
+        115px;
 
     min-height:
-        110px;
+        115px;
 
     border:
         2px solid
@@ -658,27 +1077,37 @@ body {
         center;
 
     background:
+
         radial-gradient(
             circle,
-            rgba(0,217,255,.24),
-            rgba(0,10,20,.92)
+            rgba(0,217,255,.25),
+            rgba(0,10,20,.94) 65%
         );
 
     box-shadow:
+
         0 0 30px
-        rgba(0,217,255,.6),
+        rgba(0,217,255,.55),
+
+        0 0 70px
+        rgba(0,130,255,.16),
+
         inset 0 0 25px
-        rgba(0,217,255,.2);
+        rgba(0,217,255,.25);
 
     z-index:
         5;
+
+    animation:
+        coreBreath 3s ease-in-out infinite;
+
 }
 
 
 .core-symbol {
 
     font-size:
-        45px;
+        46px;
 
     font-weight:
         bold;
@@ -687,8 +1116,9 @@ body {
         white;
 
     text-shadow:
-        0 0 15px
-        var(--cyan);
+        0 0 15px var(--cyan),
+        0 0 30px var(--cyan);
+
 }
 
 
@@ -702,6 +1132,7 @@ body {
 
     letter-spacing:
         2px;
+
 }
 
 
@@ -714,9 +1145,17 @@ body {
         var(--muted);
 
     font-size:
-        7px;
+        6px;
+
+    letter-spacing:
+        1px;
+
 }
 
+
+/* =========================================================
+   SCAN
+   ========================================================= */
 
 .scan-line {
 
@@ -724,7 +1163,7 @@ body {
         absolute;
 
     width:
-        100%;
+        105%;
 
     height:
         1px;
@@ -733,20 +1172,24 @@ body {
         var(--cyan);
 
     box-shadow:
-        0 0 12px
-        var(--cyan);
+        0 0 12px var(--cyan),
+        0 0 25px var(--cyan);
 
     animation:
-        scan 4s ease-in-out infinite;
+        scan 4.5s ease-in-out infinite;
 
     z-index:
         4;
+
+    opacity:
+        .7;
+
 }
 
 
-/* =====================================================
-   READOUT
-   ===================================================== */
+/* =========================================================
+   CORE READOUT
+   ========================================================= */
 
 .core-readout {
 
@@ -754,26 +1197,31 @@ body {
         center;
 
     margin-bottom:
-        12px;
+        10px;
 
     font-size:
-        9px;
+        8px;
 
     letter-spacing:
         2px;
 
     color:
         var(--muted);
+
 }
 
 
 .core-readout strong {
 
     color:
-        #55ffbb;
+        var(--green);
 
     margin:
         0 8px;
+
+    transition:
+        .3s;
+
 }
 
 
@@ -783,7 +1231,7 @@ body {
         inline-block;
 
     width:
-        60px;
+        55px;
 
     height:
         1px;
@@ -793,12 +1241,16 @@ body {
 
     vertical-align:
         middle;
+
+    box-shadow:
+        0 0 5px var(--cyan);
+
 }
 
 
-/* =====================================================
-   CHAT
-   ===================================================== */
+/* =========================================================
+   CHAT PANEL
+   ========================================================= */
 
 .chat-panel {
 
@@ -807,22 +1259,86 @@ body {
 
     border:
         1px solid
-        rgba(0,217,255,.5);
+        rgba(0,217,255,.48);
 
     background:
-        rgba(1,9,16,.9);
+        rgba(1,9,16,.88);
 
     box-shadow:
-        0 0 22px
-        rgba(0,217,255,.1);
+        0 0 25px
+        rgba(0,217,255,.09);
+
+    position:
+        relative;
 
 }
 
 
+/* CORNERS */
+
+.chat-panel::before,
+.chat-panel::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    width:
+        18px;
+
+    height:
+        18px;
+
+    pointer-events:
+        none;
+
+}
+
+
+.chat-panel::before {
+
+    top:
+        -1px;
+
+    left:
+        -1px;
+
+    border-top:
+        2px solid var(--cyan);
+
+    border-left:
+        2px solid var(--cyan);
+
+}
+
+
+.chat-panel::after {
+
+    bottom:
+        -1px;
+
+    right:
+        -1px;
+
+    border-bottom:
+        2px solid var(--cyan);
+
+    border-right:
+        2px solid var(--cyan);
+
+}
+
+
+/* =========================================================
+   CHAT HEADER
+   ========================================================= */
+
 .chat-header {
 
     padding:
-        10px 14px;
+        9px 13px;
 
     border-bottom:
         1px solid
@@ -838,19 +1354,25 @@ body {
         var(--cyan);
 
     font-size:
-        9px;
+        8px;
 
     letter-spacing:
         1px;
+
 }
 
 
 #thinkingStatus {
 
     color:
-        #5effba;
+        var(--green);
+
 }
 
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
 
 #messages {
 
@@ -862,6 +1384,14 @@ body {
 
     padding:
         13px;
+
+    scrollbar-width:
+        thin;
+
+    scrollbar-color:
+        var(--cyan)
+        transparent;
+
 }
 
 
@@ -878,16 +1408,20 @@ body {
 
     border:
         1px solid
-        rgba(0,217,255,.2);
+        rgba(0,217,255,.18);
 
     font-size:
-        12px;
+        11px;
 
     line-height:
         1.5;
 
     white-space:
         pre-wrap;
+
+    animation:
+        messageIn .25s ease-out;
+
 }
 
 
@@ -897,10 +1431,15 @@ body {
         auto;
 
     background:
-        rgba(0,100,150,.12);
+        rgba(0,100,150,.1);
 
     color:
         #a9eaff;
+
+    border-left:
+        2px solid
+        var(--cyan);
+
 }
 
 
@@ -910,10 +1449,14 @@ body {
         auto;
 
     background:
-        rgba(0,217,255,.12);
+        rgba(0,217,255,.09);
 
     color:
         white;
+
+    border-right:
+        2px solid
+        var(--cyan);
 
 }
 
@@ -930,16 +1473,17 @@ body {
         4px;
 
     font-size:
-        9px;
+        8px;
 
     letter-spacing:
         1px;
+
 }
 
 
-/* =====================================================
-   INPUT
-   ===================================================== */
+/* =========================================================
+   INPUT AREA
+   ========================================================= */
 
 .input-area {
 
@@ -947,14 +1491,18 @@ body {
         flex;
 
     gap:
-        7px;
+        6px;
 
     padding:
-        10px;
+        9px;
 
     border-top:
         1px solid
         rgba(0,217,255,.15);
+
+    background:
+        rgba(0,20,30,.35);
+
 }
 
 
@@ -968,16 +1516,16 @@ body {
 
     border:
         1px solid
-        rgba(0,217,255,.3);
+        rgba(0,217,255,.28);
 
     background:
-        rgba(0,0,0,.5);
+        rgba(0,0,0,.45);
 
     color:
         white;
 
     padding:
-        12px;
+        11px;
 
     outline:
         none;
@@ -986,7 +1534,16 @@ body {
         inherit;
 
     font-size:
-        12px;
+        11px;
+
+}
+
+
+#input::placeholder {
+
+    color:
+        #467488;
+
 }
 
 
@@ -996,25 +1553,31 @@ body {
         var(--cyan);
 
     box-shadow:
-        0 0 10px
-        rgba(0,217,255,.15);
+        0 0 12px
+        rgba(0,217,255,.14);
+
 }
 
+
+/* BUTTONS */
 
 .input-area button {
 
     border:
         1px solid
-        var(--cyan);
+        rgba(0,217,255,.55);
 
     background:
-        rgba(0,217,255,.08);
+        rgba(0,217,255,.055);
 
     color:
         var(--cyan);
 
     padding:
-        0 15px;
+        0 13px;
+
+    min-width:
+        42px;
 
     font-family:
         inherit;
@@ -1024,30 +1587,40 @@ body {
 
     transition:
         .2s;
+
 }
 
 
 .input-area button:hover {
 
     background:
-        rgba(0,217,255,.22);
+        rgba(0,217,255,.18);
 
     box-shadow:
         0 0 12px
-        rgba(0,217,255,.3);
+        rgba(0,217,255,.25);
+
 }
 
 
-.icon-button {
+.input-area button.active {
 
-    min-width:
-        43px;
+    background:
+        rgba(0,217,255,.2);
+
+    color:
+        white;
+
+    box-shadow:
+        0 0 15px
+        rgba(0,217,255,.5);
+
 }
 
 
-/* =====================================================
-   DERECHA
-   ===================================================== */
+/* =========================================================
+   RIGHT SIDE
+   ========================================================= */
 
 .area {
 
@@ -1055,11 +1628,15 @@ body {
         8px 0;
 
     font-size:
-        10px;
+        9px;
+
+    color:
+        #9fd6e8;
 
     border-bottom:
         1px solid
         rgba(0,217,255,.07);
+
 }
 
 
@@ -1067,7 +1644,7 @@ body {
 .right-column > .panel > p {
 
     font-size:
-        10px;
+        9px;
 
     line-height:
         1.6;
@@ -1077,6 +1654,7 @@ body {
 
     margin:
         7px 0;
+
 }
 
 
@@ -1096,19 +1674,176 @@ body {
         var(--cyan);
 
     background:
-        transparent;
+        rgba(0,217,255,.035);
 
     color:
         var(--cyan);
 
     font-family:
         inherit;
+
+    cursor:
+        pointer;
+
+    transition:
+        .2s;
+
 }
 
 
-/* =====================================================
+.log-panel button:hover {
+
+    background:
+        rgba(0,217,255,.16);
+
+    box-shadow:
+        0 0 12px
+        rgba(0,217,255,.2);
+
+}
+
+
+/* =========================================================
+   AUDIO
+   ========================================================= */
+
+.audio-status {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        7px;
+
+}
+
+
+.audio-row {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    border-bottom:
+        1px solid
+        rgba(0,217,255,.07);
+
+    padding:
+        5px 0;
+
+    font-size:
+        8px;
+
+}
+
+
+.audio-row span {
+
+    color:
+        var(--muted);
+
+}
+
+
+.audio-row strong {
+
+    color:
+        var(--green);
+
+}
+
+
+.audio-wave {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    gap:
+        3px;
+
+    height:
+        32px;
+
+    margin-top:
+        9px;
+
+}
+
+
+.audio-wave span {
+
+    width:
+        2px;
+
+    height:
+        8px;
+
+    background:
+        var(--cyan);
+
+    box-shadow:
+        0 0 5px var(--cyan);
+
+    animation:
+        audioBar 1s ease-in-out infinite;
+
+    animation-play-state:
+        paused;
+
+}
+
+
+.audio-wave span:nth-child(2) {
+    animation-delay: .1s;
+}
+
+.audio-wave span:nth-child(3) {
+    animation-delay: .2s;
+}
+
+.audio-wave span:nth-child(4) {
+    animation-delay: .3s;
+}
+
+.audio-wave span:nth-child(5) {
+    animation-delay: .4s;
+}
+
+.audio-wave span:nth-child(6) {
+    animation-delay: .5s;
+}
+
+.audio-wave span:nth-child(7) {
+    animation-delay: .6s;
+}
+
+.audio-wave span:nth-child(8) {
+    animation-delay: .7s;
+}
+
+.audio-wave span:nth-child(9) {
+    animation-delay: .8s;
+}
+
+.audio-wave span:nth-child(10) {
+    animation-delay: .9s;
+}
+
+
+/* =========================================================
    FOOTER
-   ===================================================== */
+   ========================================================= */
 
 footer {
 
@@ -1116,16 +1851,17 @@ footer {
         center;
 
     padding:
-        14px;
+        12px;
 
     color:
-        #238bab;
+        #277f9a;
 
     font-size:
-        9px;
+        8px;
 
     letter-spacing:
         5px;
+
 }
 
 
@@ -1136,12 +1872,21 @@ footer span {
 
     margin:
         0 5px;
+
 }
 
 
-/* =====================================================
+footer b {
+
+    color:
+        #245a6b;
+
+}
+
+
+/* =========================================================
    MEMORY ALERT
-   ===================================================== */
+   ========================================================= */
 
 .memory-alert {
 
@@ -1161,13 +1906,14 @@ footer span {
         center;
 
     background:
-        rgba(0,5,10,.82);
+        rgba(0,5,10,.84);
 
     backdrop-filter:
-        blur(5px);
+        blur(6px);
 
     z-index:
         100;
+
 }
 
 
@@ -1192,6 +1938,7 @@ footer span {
 
     text-align:
         center;
+
 }
 
 
@@ -1213,6 +1960,7 @@ footer span {
 
     line-height:
         1.5;
+
 }
 
 
@@ -1236,12 +1984,126 @@ footer span {
 
     font-family:
         inherit;
+
+    cursor:
+        pointer;
+
 }
 
 
-/* =====================================================
+/* =========================================================
+   SYSTEM STATES
+   ========================================================= */
+
+/* PROCESSING */
+
+body[data-hector-state="processing"] .core-ring {
+
+    border-color:
+        var(--yellow);
+
+}
+
+
+body[data-hector-state="processing"] .core-center {
+
+    border-color:
+        var(--yellow);
+
+    box-shadow:
+        0 0 35px rgba(255,220,70,.55),
+        inset 0 0 25px rgba(255,220,70,.2);
+
+}
+
+
+body[data-hector-state="processing"] .core-symbol {
+
+    text-shadow:
+        0 0 15px var(--yellow);
+
+}
+
+
+body[data-hector-state="processing"] #thinkingStatus {
+
+    color:
+        var(--yellow);
+
+}
+
+
+/* LISTENING */
+
+body[data-hector-state="listening"] .core-ring {
+
+    border-color:
+        var(--green);
+
+}
+
+
+body[data-hector-state="listening"] .core-center {
+
+    border-color:
+        var(--green);
+
+    box-shadow:
+        0 0 40px rgba(72,255,176,.55),
+        inset 0 0 25px rgba(72,255,176,.2);
+
+}
+
+
+body[data-hector-state="listening"] #thinkingStatus {
+
+    color:
+        var(--green);
+
+}
+
+
+body[data-hector-state="listening"] .audio-wave span {
+
+    animation-play-state:
+        running;
+
+}
+
+
+/* RESPONDING */
+
+body[data-hector-state="responding"] .core-ring {
+
+    border-color:
+        var(--cyan-soft);
+
+}
+
+
+body[data-hector-state="responding"] .core-center {
+
+    transform:
+        scale(1.04);
+
+    box-shadow:
+        0 0 45px rgba(0,217,255,.75),
+        inset 0 0 30px rgba(0,217,255,.3);
+
+}
+
+
+body[data-hector-state="responding"] .audio-wave span {
+
+    animation-play-state:
+        running;
+
+}
+
+
+/* =========================================================
    ANIMACIONES
-   ===================================================== */
+   ========================================================= */
 
 @keyframes spin {
 
@@ -1254,6 +2116,7 @@ footer span {
         transform:
             rotate(360deg);
     }
+
 }
 
 
@@ -1268,6 +2131,7 @@ footer span {
         transform:
             rotate(0deg);
     }
+
 }
 
 
@@ -1275,18 +2139,45 @@ footer span {
 
     0%,
     100% {
+
         transform:
             scale(.96);
+
         opacity:
-            .65;
+            .55;
+
     }
 
     50% {
+
         transform:
-            scale(1.04);
+            scale(1.05);
+
         opacity:
             1;
+
     }
+
+}
+
+
+@keyframes coreBreath {
+
+    0%,
+    100% {
+
+        transform:
+            scale(.985);
+
+    }
+
+    50% {
+
+        transform:
+            scale(1.015);
+
+    }
+
 }
 
 
@@ -1294,31 +2185,110 @@ footer span {
 
     0%,
     100% {
+
         transform:
-            translateY(-160px);
+            translateY(-170px);
 
         opacity:
             0;
+
     }
 
     20%,
     80% {
+
         opacity:
-            .8;
+            .75;
+
     }
 
     50% {
+
         transform:
-            translateY(160px);
+            translateY(170px);
+
     }
+
 }
 
 
-/* =====================================================
-   CELULAR
-   ===================================================== */
+@keyframes statusPulse {
 
-@media (max-width: 850px) {
+    0%,
+    100% {
+
+        opacity:
+            .55;
+
+        transform:
+            scale(.85);
+
+    }
+
+    50% {
+
+        opacity:
+            1;
+
+        transform:
+            scale(1.15);
+
+    }
+
+}
+
+
+@keyframes messageIn {
+
+    from {
+
+        opacity:
+            0;
+
+        transform:
+            translateY(4px);
+
+    }
+
+    to {
+
+        opacity:
+            1;
+
+        transform:
+            translateY(0);
+
+    }
+
+}
+
+
+@keyframes audioBar {
+
+    0%,
+    100% {
+
+        height:
+            6px;
+
+    }
+
+    50% {
+
+        height:
+            25px;
+
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 950px) {
+
 
     .topbar {
 
@@ -1326,6 +2296,7 @@ footer span {
             1fr 1fr;
 
     }
+
 
     .brand {
 
@@ -1337,14 +2308,20 @@ footer span {
 
     }
 
+
     .evolution {
+
         grid-column:
             1;
+
     }
 
+
     .system-status {
+
         grid-column:
             2;
+
     }
 
 
@@ -1352,6 +2329,14 @@ footer span {
 
         grid-template-columns:
             1fr;
+
+    }
+
+
+    .center-column {
+
+        order:
+            -1;
 
     }
 
@@ -1365,13 +2350,8 @@ footer span {
         grid-template-columns:
             1fr 1fr;
 
-    }
-
-
-    .center-column {
-
-        order:
-            -1;
+        align-items:
+            start;
 
     }
 
@@ -1379,30 +2359,31 @@ footer span {
     .core-system {
 
         width:
-            min(88vw, 430px);
+            min(88vw, 460px);
 
         height:
-            min(88vw, 430px);
-
-    }
-
-
-    .panel {
-
-        font-size:
-            10px;
+            min(88vw, 460px);
 
     }
 
 }
 
 
-@media (max-width: 520px) {
+@media (max-width: 560px) {
+
 
     .hud {
 
         padding:
-            8px;
+            7px;
+
+    }
+
+
+    .topbar {
+
+        gap:
+            7px;
 
     }
 
@@ -1410,7 +2391,7 @@ footer span {
     .brand h1 {
 
         font-size:
-            27px;
+            26px;
 
         letter-spacing:
             4px;
@@ -1437,7 +2418,7 @@ footer span {
     .system-status {
 
         font-size:
-            8px;
+            7px;
 
     }
 
@@ -1454,16 +2435,24 @@ footer span {
     .core-system {
 
         width:
-            92vw;
+            94vw;
 
         height:
-            92vw;
+            94vw;
 
         min-width:
-            250px;
+            245px;
 
         min-height:
-            250px;
+            245px;
+
+    }
+
+
+    .core-symbol {
+
+        font-size:
+            38px;
 
     }
 
@@ -1476,10 +2465,32 @@ footer span {
     }
 
 
-    .message {
+    .input-area {
 
-        font-size:
-            11px;
+        flex-wrap:
+            wrap;
+
+    }
+
+
+    #input {
+
+        order:
+            -1;
+
+        flex-basis:
+            100%;
+
+    }
+
+
+    .input-area button {
+
+        flex:
+            1;
+
+        height:
+            40px;
 
     }
 
@@ -1494,4 +2505,4 @@ footer span {
 
     }
 
-    }
+}
