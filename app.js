@@ -1,70 +1,75 @@
-```javascript
-/* =========================================================
+/\* =========================================================
    H.E.C.T.O.R. OS
-   Conversational Core v3.1
-   Sistema integrado
-   ========================================================= */
+   Conversational Core v2
+   \========================================================= \*/
 
-const WORKER_URL =
-    "https://meca-core.nicomeca121.workers.dev";
+const WORKER\_URL =
+    "[https://meca-core.nicomeca121.workers.dev](https://meca-core.nicomeca121.workers.dev)";
 
-const CHAT_HISTORY_KEY =
-    "hector_conversation";
+const CHAT\_HISTORY\_KEY =
+    "hector\_conversation";
 
-const BITACORA_KEY =
-    "meca_bitacora";
-
-const INTERFACE_KEY =
-    "hector_interface";
+const BITACORA\_KEY =
+    "meca\_bitacora";
 
 
-/* =========================================================
-   ESTADO
-   ========================================================= */
+/\* =========================================================
+   ESTADO DEL SISTEMA
+   \========================================================= \*/
 
 let procesando = false;
+
 let vozActiva = false;
+
 let escuchando = false;
+
 let reconocimientoVoz = null;
 
 let bloqueoHasta = 0;
+
 let intervaloBloqueo = null;
 
 
-/* =========================================================
+/\* =========================================================
    ELEMENTOS
-   ========================================================= */
+   \========================================================= \*/
 
 function input() {
     return document.getElementById("input");
 }
 
+
 function messages() {
     return document.getElementById("messages");
 }
+
 
 function sendButton() {
     return document.getElementById("sendButton");
 }
 
+
 function voiceButton() {
     return document.getElementById("voiceButton");
 }
 
+
 function thinkingStatus() {
     return document.getElementById("thinkingStatus");
 }
+
 
 function coreStatus() {
     return document.getElementById("coreStatus");
 }
 
 
-/* =========================================================
+/\* =========================================================
    UTILIDADES
-   ========================================================= */
+   \========================================================= \*/
 
 function normalizar(texto) {
+
     return String(texto || "")
         .toLowerCase()
         .normalize("NFD")
@@ -73,9 +78,23 @@ function normalizar(texto) {
 }
 
 
-/* =========================================================
-   CHAT
-   ========================================================= */
+function escaparTexto(texto) {
+
+    return String(texto || "");
+}
+
+
+function esperar(ms) {
+
+    return new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
+}
+
+
+/\* =========================================================
+   CHAT VISUAL
+   \========================================================= \*/
 
 function addMessage(texto, tipo = "meca") {
 
@@ -83,10 +102,13 @@ function addMessage(texto, tipo = "meca") {
 
     if (!caja) return;
 
-    const mensaje = document.createElement("div");
+
+    const mensaje =
+        document.createElement("div");
 
     mensaje.className =
         "message " + tipo;
+
 
     if (tipo === "meca") {
 
@@ -96,31 +118,36 @@ function addMessage(texto, tipo = "meca") {
         nombre.textContent =
             "H.E.C.T.O.R.";
 
+
         const contenido =
             document.createElement("span");
 
         contenido.textContent =
-            String(texto || "");
+            escaparTexto(texto);
+
 
         mensaje.appendChild(nombre);
+
         mensaje.appendChild(contenido);
 
     } else {
 
         mensaje.textContent =
-            String(texto || "");
+            escaparTexto(texto);
     }
 
+
     caja.appendChild(mensaje);
+
 
     caja.scrollTop =
         caja.scrollHeight;
 }
 
 
-/* =========================================================
+/\* =========================================================
    HISTORIAL
-   ========================================================= */
+   \========================================================= \*/
 
 function obtenerHistorial() {
 
@@ -128,17 +155,21 @@ function obtenerHistorial() {
 
         const datos =
             localStorage.getItem(
-                CHAT_HISTORY_KEY
+                CHAT\_HISTORY\_KEY
             );
+
 
         if (!datos)
             return [];
 
+
         const historial =
             JSON.parse(datos);
 
+
         if (!Array.isArray(historial))
             return [];
+
 
         return historial.filter(
             mensaje =>
@@ -153,7 +184,7 @@ function obtenerHistorial() {
     } catch (error) {
 
         console.warn(
-            "Error leyendo historial:",
+            "No se pudo leer el historial:",
             error
         );
 
@@ -166,17 +197,25 @@ function guardarHistorial(historial) {
 
     try {
 
+        /\*
+         \* 20 mensajes = suficiente contexto
+         \* sin mandar una cantidad innecesaria
+         \* de información al Worker.
+         \*/
+
+        const limitado =
+            historial.slice(-20);
+
+
         localStorage.setItem(
-            CHAT_HISTORY_KEY,
-            JSON.stringify(
-                historial.slice(-20)
-            )
+            CHAT\_HISTORY\_KEY,
+            JSON.stringify(limitado)
         );
 
     } catch (error) {
 
         console.warn(
-            "Error guardando historial:",
+            "No se pudo guardar el historial:",
             error
         );
     }
@@ -191,11 +230,18 @@ function registrarConversacion(
     const historial =
         obtenerHistorial();
 
+
     historial.push({
+
         role: role,
+
         text: String(text),
-        timestamp: Date.now()
+
+        timestamp:
+            Date.now()
+
     });
+
 
     guardarHistorial(
         historial
@@ -203,61 +249,83 @@ function registrarConversacion(
 }
 
 
+/\* =========================================================
+   RESTAURAR CHAT
+   \========================================================= \*/
+
 function restaurarConversacion() {
 
     const historial =
         obtenerHistorial();
 
+
     const caja =
         messages();
+
 
     if (!caja)
         return;
 
-    if (historial.length === 0)
-        return;
 
-    caja.innerHTML = "";
+    /\*
+     \* Si existe historial, eliminamos
+     \* el mensaje inicial del HTML para
+     \* evitar duplicaciones.
+     \*/
 
-    historial.forEach(
-        mensaje => {
+    if (historial.length > 0) {
 
-            addMessage(
-                mensaje.text,
-                mensaje.role === "user"
-                    ? "usuario"
-                    : "meca"
-            );
+        caja.innerHTML = "";
 
-        }
-    );
+
+        historial.forEach(
+            mensaje => {
+
+                addMessage(
+                    mensaje.text,
+                    mensaje.role === "user"
+                        ? "usuario"
+                        : "meca"
+                );
+
+            }
+        );
+    }
 }
 
+
+/\* =========================================================
+   LIMPIAR CONVERSACIÓN
+   \========================================================= \*/
 
 function limpiarConversacion() {
 
     localStorage.removeItem(
-        CHAT_HISTORY_KEY
+        CHAT\_HISTORY\_KEY
     );
+
 
     const caja =
         messages();
 
+
     if (caja)
         caja.innerHTML = "";
+
 
     addMessage(
         "Historial conversacional eliminado. Núcleo listo."
     );
 }
 
-window.limpiarConversacion =
+
+window\.limpiarConversacion =
     limpiarConversacion;
 
 
-/* =========================================================
+/\* =========================================================
    BITÁCORA
-   ========================================================= */
+   \========================================================= \*/
 
 function obtenerBitacora() {
 
@@ -265,14 +333,17 @@ function obtenerBitacora() {
 
         const datos =
             localStorage.getItem(
-                BITACORA_KEY
+                BITACORA\_KEY
             );
+
 
         if (!datos)
             return [];
 
+
         const notas =
             JSON.parse(datos);
+
 
         return Array.isArray(notas)
             ? notas
@@ -290,15 +361,23 @@ function guardarNota(texto) {
     const notas =
         obtenerBitacora();
 
+
     notas.push({
+
         texto: String(texto),
-        fecha: new Date().toLocaleString("es-AR")
+
+        fecha:
+            new Date().toLocaleString(
+                "es-AR"
+            )
+
     });
+
 
     try {
 
         localStorage.setItem(
-            BITACORA_KEY,
+            BITACORA\_KEY,
             JSON.stringify(notas)
         );
 
@@ -317,6 +396,7 @@ function mostrarBitacora() {
     const notas =
         obtenerBitacora();
 
+
     if (notas.length === 0) {
 
         addMessage(
@@ -326,36 +406,52 @@ function mostrarBitacora() {
         return;
     }
 
+
     addMessage(
-        `BITÁCORA — ${notas.length} registro(s)`
+        \`BITÁCORA — ${notas.length} registro(s)\`
     );
+
 
     notas.forEach(
         (nota, indice) => {
 
             addMessage(
-                `${indice + 1}. [${nota.fecha}] ${nota.texto}`
+                \`${indice + 1}. [${nota.fecha}] ${nota.texto}\`
             );
 
         }
     );
 }
 
-window.mostrarBitacora =
+
+window\.mostrarBitacora =
     mostrarBitacora;
 
 
-/* =========================================================
-   COMANDOS DE BITÁCORA
-   ========================================================= */
+/\* =========================================================
+   COMANDOS LOCALES
+   \========================================================= \*/
 
 function procesarBitacora(texto) {
 
     const original =
         String(texto || "").trim();
 
+
     const limpio =
         normalizar(original);
+
+
+    /\*
+     \* IMPORTANTE:
+     \*
+     \* Estos comandos requieren que la frase
+     \* empiece exactamente de esta manera.
+     \*
+     \* Así evitamos que una palabra parecida
+     \* dentro de una conversación normal
+     \* active accidentalmente un comando.
+     \*/
 
     if (
         limpio === "ver bitacora" ||
@@ -369,22 +465,33 @@ function procesarBitacora(texto) {
         return true;
     }
 
+
     const patrones = [
+
         "hector anota ",
         "hector guarda ",
         "anota ",
         "guardar en bitacora ",
         "guarda en bitacora "
+
     ];
 
-    for (const patron of patrones) {
 
-        if (limpio.startsWith(patron)) {
+    for (
+        const patron of patrones
+    ) {
+
+        if (
+            limpio.startsWith(patron)
+        ) {
 
             const nota =
                 original
-                    .substring(patron.length)
+                    .substring(
+                        patron.length
+                    )
                     .trim();
+
 
             if (!nota) {
 
@@ -395,206 +502,35 @@ function procesarBitacora(texto) {
                 return true;
             }
 
-            guardarNota(nota);
+
+            guardarNota(
+                nota
+            );
+
 
             addMessage(
                 "Anotado. El registro quedó guardado en la bitácora."
             );
 
+
             return true;
         }
     }
+
 
     return false;
 }
 
 
-/* =========================================================
-   INTERFACES
-   ========================================================= */
-
-const INTERFACES = [
-    {
-        id: "hud",
-        nombre: "H.E.C.T.O.R. HUD",
-        clase: "theme-hud"
-    },
-    {
-        id: "tactical",
-        nombre: "TACTICAL",
-        clase: "theme-tactical"
-    },
-    {
-        id: "research",
-        nombre: "RESEARCH",
-        clase: "theme-research"
-    },
-    {
-        id: "core",
-        nombre: "CORE",
-        clase: "theme-core"
-    }
-];
-
-
-function obtenerInterfazActual() {
-
-    const guardada =
-        localStorage.getItem(
-            INTERFACE_KEY
-        );
-
-    return (
-        INTERFACES.find(
-            interfaz =>
-                interfaz.id === guardada
-        ) ||
-        INTERFACES[0]
-    );
-}
-
-
-function aplicarInterfaz(id, anunciar = false) {
-
-    const interfaz =
-        INTERFACES.find(
-            item =>
-                item.id === id
-        ) ||
-        INTERFACES[0];
-
-    const body =
-        document.body;
-
-    if (!body)
-        return;
-
-    INTERFACES.forEach(
-        item => {
-
-            body.classList.remove(
-                item.clase
-            );
-
-        }
-    );
-
-    body.classList.add(
-        interfaz.clase
-    );
-
-    localStorage.setItem(
-        INTERFACE_KEY,
-        interfaz.id
-    );
-
-    const indicador =
-        document.getElementById(
-            "interfaceName"
-        );
-
-    if (indicador) {
-
-        indicador.textContent =
-            interfaz.nombre;
-    }
-
-    if (anunciar) {
-
-        addMessage(
-            `Interfaz activa: ${interfaz.nombre}.`
-        );
-    }
-}
-
-
-function cambiarInterfaz() {
-
-    const actual =
-        obtenerInterfazActual();
-
-    const indice =
-        INTERFACES.findIndex(
-            item =>
-                item.id === actual.id
-        );
-
-    const siguiente =
-        INTERFACES[
-            (indice + 1) %
-            INTERFACES.length
-        ];
-
-    aplicarInterfaz(
-        siguiente.id,
-        true
-    );
-}
-
-window.cambiarInterfaz =
-    cambiarInterfaz;
-
-
-/* =========================================================
-   BOTÓN DE INTERFAZ
-   ========================================================= */
-
-function crearBotonInterfaz() {
-
-    if (
-        document.getElementById(
-            "interfaceButton"
-        )
-    )
-        return;
-
-    const status =
-        document.querySelector(
-            ".system-status"
-        );
-
-    if (!status)
-        return;
-
-    const boton =
-        document.createElement(
-            "button"
-        );
-
-    boton.id =
-        "interfaceButton";
-
-    boton.type =
-        "button";
-
-    boton.className =
-        "interface-button";
-
-    boton.textContent =
-        "INTERFACE";
-
-    boton.title =
-        "Cambiar interfaz";
-
-    boton.addEventListener(
-        "click",
-        cambiarInterfaz
-    );
-
-    status.appendChild(
-        boton
-    );
-}
-
-
-/* =========================================================
+/\* =========================================================
    COMANDOS DEL SISTEMA
-   ========================================================= */
+   \========================================================= \*/
 
 function procesarComandoSistema(texto) {
 
     const limpio =
         normalizar(texto);
+
 
     if (
         limpio === "limpiar conversacion" ||
@@ -607,133 +543,161 @@ function procesarComandoSistema(texto) {
         return true;
     }
 
+
     if (
         limpio === "detener voz" ||
         limpio === "silenciar" ||
         limpio === "silencio"
     ) {
 
-        vozActiva =
-            false;
+        vozActiva = false;
 
-        if (
-            window.speechSynthesis
-        ) {
+        speechSynthesis.cancel();
 
-            speechSynthesis.cancel();
-        }
 
         const boton =
             voiceButton();
 
+
         if (boton)
-            boton.textContent =
-                "◉";
+            boton.textContent = "◉";
+
 
         addMessage(
             "Salida de voz desactivada."
         );
 
+
         return true;
     }
+
 
     if (
         limpio === "activar voz" ||
         limpio === "voz"
     ) {
 
-        vozActiva =
-            true;
+        vozActiva = true;
+
 
         const boton =
             voiceButton();
 
+
         if (boton)
-            boton.textContent =
-                "◉ ON";
+            boton.textContent = "◉ ON";
+
 
         addMessage(
             "Salida de voz activada."
         );
 
-        return true;
-    }
-
-    if (
-        limpio === "cambiar interfaz" ||
-        limpio === "cambiar hud" ||
-        limpio === "siguiente interfaz"
-    ) {
-
-        cambiarInterfaz();
 
         return true;
     }
+
 
     return false;
 }
 
 
-/* =========================================================
-   ESTADO
-   ========================================================= */
+/\* =========================================================
+   ESTADO VISUAL
+   \========================================================= \*/
 
 function estadoProcesando() {
 
-    if (thinkingStatus())
-        thinkingStatus().textContent =
+    const status =
+        thinkingStatus();
+
+
+    const core =
+        coreStatus();
+
+
+    if (status)
+        status.textContent =
             "PROCESSING";
 
-    if (coreStatus())
-        coreStatus().textContent =
+
+    if (core)
+        core.textContent =
             "ANALYZING";
 }
 
 
 function estadoListo() {
 
-    if (thinkingStatus())
-        thinkingStatus().textContent =
+    const status =
+        thinkingStatus();
+
+
+    const core =
+        coreStatus();
+
+
+    if (status)
+        status.textContent =
             "READY";
 
-    if (coreStatus())
-        coreStatus().textContent =
+
+    if (core)
+        core.textContent =
             "READY";
 }
 
 
 function estadoError() {
 
-    if (thinkingStatus())
-        thinkingStatus().textContent =
+    const status =
+        thinkingStatus();
+
+
+    const core =
+        coreStatus();
+
+
+    if (status)
+        status.textContent =
             "ERROR";
 
-    if (coreStatus())
-        coreStatus().textContent =
+
+    if (core)
+        core.textContent =
             "ERROR";
 }
 
 
 function estadoEspera(segundos) {
 
-    if (thinkingStatus())
-        thinkingStatus().textContent =
-            `WAIT ${segundos}s`;
+    const status =
+        thinkingStatus();
 
-    if (coreStatus())
-        coreStatus().textContent =
+
+    const core =
+        coreStatus();
+
+
+    if (status)
+        status.textContent =
+            \`WAIT ${segundos}s\`;
+
+
+    if (core)
+        core.textContent =
             "RATE LIMIT";
 }
 
 
-/* =========================================================
-   ERRORES GEMINI
-   ========================================================= */
+/\* =========================================================
+   ANALIZAR ERROR DEL WORKER
+   \========================================================= \*/
 
 function obtenerObjetoError(datos) {
 
     if (!datos)
         return null;
+
 
     if (
         datos.error &&
@@ -742,6 +706,7 @@ function obtenerObjetoError(datos) {
 
         return datos.error;
     }
+
 
     if (
         datos.details &&
@@ -752,6 +717,7 @@ function obtenerObjetoError(datos) {
         return datos.details.error;
     }
 
+
     return datos;
 }
 
@@ -761,19 +727,19 @@ function esRateLimit(datos, status) {
     const error =
         obtenerObjetoError(datos);
 
+
     const mensaje =
         JSON.stringify(
-            error ||
-            datos ||
-            ""
+            error || datos || ""
         ).toLowerCase();
+
 
     return (
         status === 429 ||
-        mensaje.includes("too_many_requests") ||
+        mensaje.includes("too\_many\_requests") ||
         mensaje.includes("quota exceeded") ||
         mensaje.includes("rate limit") ||
-        mensaje.includes("free_tier_requests")
+        mensaje.includes("free\_tier\_requests")
     );
 }
 
@@ -785,10 +751,20 @@ function extraerSegundosEspera(datos) {
             datos || ""
         );
 
+
+    /\*
+     \* Gemini suele devolver:
+     \*
+     \* "retry in 45.328388789s"
+     \*
+     \* También contemplamos otras variantes.
+     \*/
+
     const coincidencia =
         texto.match(
-            /retry(?:\s+in)?\s+([0-9]+(?:\.[0-9]+)?)\s*s/i
+            /retry(?:\s+in)?\s+([0-9]+(?:\\.[0-9]+)?)\s\*s/i
         );
+
 
     if (coincidencia) {
 
@@ -802,13 +778,14 @@ function extraerSegundosEspera(datos) {
         );
     }
 
+
     return 30;
 }
 
 
-/* =========================================================
+/\* =========================================================
    BLOQUEO POR CUOTA
-   ========================================================= */
+   \========================================================= \*/
 
 function iniciarBloqueo(segundos) {
 
@@ -818,16 +795,20 @@ function iniciarBloqueo(segundos) {
             Math.ceil(segundos)
         );
 
+
     bloqueoHasta =
         Date.now() +
-        segundos * 1000;
+        segundos \* 1000;
+
 
     actualizarBloqueo();
+
 
     if (intervaloBloqueo)
         clearInterval(
             intervaloBloqueo
         );
+
 
     intervaloBloqueo =
         setInterval(
@@ -850,26 +831,32 @@ function actualizarBloqueo() {
             )
         );
 
+
     if (restante <= 0) {
 
-        if (intervaloBloqueo)
-            clearInterval(
-                intervaloBloqueo
-            );
+        clearInterval(
+            intervaloBloqueo
+        );
+
 
         intervaloBloqueo =
             null;
 
+
         bloqueoHasta =
             0;
+
 
         procesando =
             false;
 
+
         estadoListo();
+
 
         const boton =
             sendButton();
+
 
         if (boton) {
 
@@ -880,15 +867,24 @@ function actualizarBloqueo() {
                 "➤";
         }
 
+
+        addMessage(
+            "Núcleo disponible nuevamente."
+        );
+
+
         return;
     }
+
 
     estadoEspera(
         restante
     );
 
+
     const boton =
         sendButton();
+
 
     if (boton) {
 
@@ -896,14 +892,14 @@ function actualizarBloqueo() {
             true;
 
         boton.textContent =
-            `${restante}s`;
+            \`${restante}s\`;
     }
 }
 
 
-/* =========================================================
-   ERROR IA
-   ========================================================= */
+/\* =========================================================
+   ERROR AMIGABLE
+   \========================================================= \*/
 
 function manejarErrorIA(
     datos,
@@ -914,6 +910,7 @@ function manejarErrorIA(
         "Respuesta del Worker:",
         datos
     );
+
 
     if (
         esRateLimit(
@@ -927,19 +924,39 @@ function manejarErrorIA(
                 datos
             );
 
+
         iniciarBloqueo(
             segundos
         );
 
+
         addMessage(
-            `Límite temporal alcanzado. ` +
-            `H.E.C.T.O.R. podrá continuar en aproximadamente ${segundos} segundos.`
+            \`He alcanzado temporalmente el límite de procesamiento de Gemini. \` +
+            \`Podré continuar en aproximadamente ${segundos} segundos.\`
         );
+
 
         return;
     }
 
+
     estadoError();
+
+
+    const error =
+        obtenerObjetoError(
+            datos
+        );
+
+
+    const mensaje =
+        (
+            error &&
+            typeof error.message === "string"
+        )
+            ? error.message
+            : "";
+
 
     if (
         status === 401 ||
@@ -947,39 +964,55 @@ function manejarErrorIA(
     ) {
 
         addMessage(
-            "La autenticación con el núcleo de IA fue rechazada. Revisa la credencial del Worker."
+            "La autenticación con el núcleo de IA fue rechazada. " +
+            "La conexión está activa, pero la credencial necesita revisión."
         );
+
 
         return;
     }
+
 
     if (status === 400) {
 
         addMessage(
-            "El núcleo rechazó la solicitud por un formato no válido."
+            "El núcleo rechazó la solicitud. " +
+            "Puede tratarse de un formato o parámetro no válido."
         );
+
 
         return;
     }
 
+
+    if (mensaje) {
+
+        console.warn(
+            "Detalle IA:",
+            mensaje
+        );
+    }
+
+
     addMessage(
-        "El núcleo de IA encontró un problema al procesar la solicitud."
+        "El núcleo de IA encontró un problema al procesar la solicitud. " +
+        "Revisa la consola para obtener el detalle técnico."
     );
 }
 
 
-/* =========================================================
+/\* =========================================================
    IA
-   ========================================================= */
+   \========================================================= \*/
 
 async function hablarConIA(texto) {
 
     if (procesando)
         return;
 
+
     if (
-        bloqueoHasta >
-        Date.now()
+        bloqueoHasta > Date.now()
     ) {
 
         actualizarBloqueo();
@@ -987,38 +1020,51 @@ async function hablarConIA(texto) {
         return;
     }
 
+
     procesando =
         true;
 
+
     estadoProcesando();
+
 
     try {
 
         const historial =
             obtenerHistorial();
 
+
         const respuesta =
             await fetch(
-                WORKER_URL,
+                WORKER\_URL,
                 {
+
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
 
                     body:
                         JSON.stringify({
+
                             message:
                                 texto,
+
                             history:
                                 historial
+
                         })
+
                 }
             );
 
+
         let datos;
+
 
         try {
 
@@ -1030,10 +1076,11 @@ async function hablarConIA(texto) {
             datos = {
                 error: {
                     message:
-                        "Respuesta no válida del Worker."
+                        "El Worker devolvió una respuesta no válida."
                 }
             };
         }
+
 
         if (!respuesta.ok) {
 
@@ -1042,38 +1089,47 @@ async function hablarConIA(texto) {
                 respuesta.status
             );
 
+
             return;
         }
+
 
         const respuestaIA =
             typeof datos.reply === "string"
                 ? datos.reply.trim()
                 : "";
 
+
         if (!respuestaIA) {
 
             estadoError();
+
 
             addMessage(
                 "El núcleo respondió, pero no devolvió contenido."
             );
 
+
             return;
         }
+
 
         addMessage(
             respuestaIA,
             "meca"
         );
 
+
         registrarConversacion(
             "assistant",
             respuestaIA
         );
 
+
         hablar(
             respuestaIA
         );
+
 
     } catch (error) {
 
@@ -1082,17 +1138,26 @@ async function hablarConIA(texto) {
             error
         );
 
+
         estadoError();
 
+
         addMessage(
-            "No pude establecer comunicación con el núcleo de IA."
+            "No pude establecer comunicación con el núcleo de IA. " +
+            "Comprueba la conexión con el servidor."
         );
+
 
     } finally {
 
+        /\*
+         \* Si existe un bloqueo de cuota,
+         \* el propio temporizador controla
+         \* el estado.
+         \*/
+
         if (
-            bloqueoHasta <=
-            Date.now()
+            bloqueoHasta <= Date.now()
         ) {
 
             procesando =
@@ -1104,119 +1169,147 @@ async function hablarConIA(texto) {
 }
 
 
-/* =========================================================
-   SEND
-   ========================================================= */
+/\* =========================================================
+   ENVIAR MENSAJE
+   \========================================================= \*/
 
 async function sendMessage() {
 
     const campo =
         input();
 
+
     if (!campo)
         return;
 
+
     if (
         procesando ||
-        bloqueoHasta >
-        Date.now()
-    )
+        bloqueoHasta > Date.now()
+    ) {
+
         return;
+    }
+
 
     const texto =
         campo.value.trim();
 
+
     if (!texto)
         return;
+
 
     addMessage(
         texto,
         "usuario"
     );
 
+
     campo.value =
         "";
+
 
     registrarConversacion(
         "user",
         texto
     );
 
-    if (
-        procesarComandoSistema(
-            texto
-        )
-    )
-        return;
+
+    /\*
+     \* Primero procesamos comandos
+     \* que no necesitan IA.
+     \*/
 
     if (
-        procesarBitacora(
-            texto
-        )
-    )
+        procesarComandoSistema(texto)
+    ) {
+
         return;
+    }
+
+
+    if (
+        procesarBitacora(texto)
+    ) {
+
+        return;
+    }
+
 
     await hablarConIA(
         texto
     );
 }
 
-window.sendMessage =
+
+window\.sendMessage =
     sendMessage;
 
 
-/* =========================================================
-   VOZ
-   ========================================================= */
+/\* =========================================================
+   VOZ — SALIDA
+   \========================================================= \*/
 
 function hablar(texto) {
 
     if (!vozActiva)
         return;
 
-    if (!window.speechSynthesis)
+
+    if (
+        !window\.speechSynthesis
+    )
         return;
 
+
     speechSynthesis.cancel();
+
 
     const voz =
         new SpeechSynthesisUtterance(
             texto
         );
 
+
     voz.lang =
         "es-AR";
 
-    /*
-     * Voz más grave y pausada.
-     * La voz disponible depende del navegador/SO.
-     */
+
     voz.rate =
-        0.90;
+        0.95;
+
 
     voz.pitch =
-        0.65;
+        0.85;
+
 
     voz.volume =
         1;
 
-    voz.onstart =
-        () => {
 
-            if (thinkingStatus())
-                thinkingStatus().textContent =
-                    "SPEAKING";
-        };
+    voz.onstart = () => {
 
-    voz.onend =
-        () => {
+        const status =
+            thinkingStatus();
 
-            if (
-                bloqueoHasta <=
-                Date.now()
-            )
-                estadoListo();
-        };
+
+        if (status)
+            status.textContent =
+                "SPEAKING";
+    };
+
+
+    voz.onend = () => {
+
+        if (
+            bloqueoHasta <= Date.now()
+        ) {
+
+            estadoListo();
+        }
+    };
+
 
     speechSynthesis.speak(
         voz
@@ -1229,8 +1322,10 @@ function toggleVoice() {
     vozActiva =
         !vozActiva;
 
+
     const boton =
         voiceButton();
+
 
     if (vozActiva) {
 
@@ -1238,7 +1333,17 @@ function toggleVoice() {
             boton.textContent =
                 "◉ ON";
 
+
         addMessage(
+            "Salida de voz activada."
+        );
+
+
+        /\*
+         \* Pequeña confirmación hablada.
+         \*/
+
+        hablar(
             "Salida de voz activada."
         );
 
@@ -1248,10 +1353,14 @@ function toggleVoice() {
             boton.textContent =
                 "◉";
 
+
         if (
-            window.speechSynthesis
-        )
+            window\.speechSynthesis
+        ) {
+
             speechSynthesis.cancel();
+        }
+
 
         addMessage(
             "Salida de voz desactivada."
@@ -1259,68 +1368,22 @@ function toggleVoice() {
     }
 }
 
-window.toggleVoice =
+
+window\.toggleVoice =
     toggleVoice;
 
 
-/* =========================================================
-   MICROFONO
-   ========================================================= */
+/\* =========================================================
+   RECONOCIMIENTO DE VOZ
+   \========================================================= \*/
 
 function obtenerReconocimientoVoz() {
 
     return (
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition ||
+        window\.SpeechRecognition ||
+        window\.webkitSpeechRecognition ||
         null
     );
-}
-
-
-function actualizarBotonMicrofono() {
-
-    const boton =
-        document.getElementById(
-            "microphoneButton"
-        );
-
-    if (!boton)
-        return;
-
-    boton.textContent =
-        escuchando
-            ? "●"
-            : "🎙";
-
-    boton.title =
-        escuchando
-            ? "Detener escucha"
-            : "Hablar con H.E.C.T.O.R.";
-}
-
-
-function detenerReconocimientoVoz() {
-
-    if (
-        reconocimientoVoz &&
-        escuchando
-    ) {
-
-        try {
-            reconocimientoVoz.stop();
-        } catch {}
-    }
-
-    escuchando =
-        false;
-
-    actualizarBotonMicrofono();
-
-    if (
-        bloqueoHasta <=
-        Date.now()
-    )
-        estadoListo();
 }
 
 
@@ -1329,14 +1392,18 @@ function iniciarReconocimientoVoz() {
     const SpeechRecognition =
         obtenerReconocimientoVoz();
 
+
     if (!SpeechRecognition) {
 
         addMessage(
-            "Este navegador no admite entrada por voz. Prueba con Chrome o Edge."
+            "El navegador no admite entrada por voz. " +
+            "Prueba con Chrome o Edge."
         );
+
 
         return;
     }
+
 
     if (escuchando) {
 
@@ -1345,22 +1412,28 @@ function iniciarReconocimientoVoz() {
         return;
     }
 
+
     if (!reconocimientoVoz) {
 
         reconocimientoVoz =
             new SpeechRecognition();
 
+
         reconocimientoVoz.lang =
             "es-AR";
+
 
         reconocimientoVoz.continuous =
             false;
 
+
         reconocimientoVoz.interimResults =
             false;
 
+
         reconocimientoVoz.maxAlternatives =
             1;
+
 
         reconocimientoVoz.onstart =
             () => {
@@ -1368,44 +1441,70 @@ function iniciarReconocimientoVoz() {
                 escuchando =
                     true;
 
+
                 actualizarBotonMicrofono();
 
-                if (thinkingStatus())
-                    thinkingStatus().textContent =
+
+                const status =
+                    thinkingStatus();
+
+
+                if (status)
+                    status.textContent =
                         "LISTENING";
             };
+
 
         reconocimientoVoz.onresult =
             event => {
 
                 const resultado =
-                    event.results[0][0]
-                        .transcript;
+                    event.results[0][0].transcript;
+
 
                 const campo =
                     input();
+
 
                 if (campo) {
 
                     campo.value =
                         resultado;
 
+
                     campo.focus();
                 }
+
+
+                detenerReconocimientoVoz();
+
+
+                /\*
+                 \* No enviamos automáticamente.
+                 \* El usuario puede revisar lo
+                 \* que H.E.C.T.O.R. entendió.
+                 \*/
             };
+
 
         reconocimientoVoz.onerror =
             event => {
 
                 console.warn(
-                    "Micrófono:",
+                    "Reconocimiento de voz:",
                     event.error
                 );
+
 
                 escuchando =
                     false;
 
+
                 actualizarBotonMicrofono();
+
+
+                estadoListo();
+
 
                 if (
                     event.error ===
@@ -1416,9 +1515,8 @@ function iniciarReconocimientoVoz() {
                         "El navegador bloqueó el acceso al micrófono."
                     );
                 }
-
-                estadoListo();
             };
+
 
         reconocimientoVoz.onend =
             () => {
@@ -1426,15 +1524,19 @@ function iniciarReconocimientoVoz() {
                 escuchando =
                     false;
 
+
                 actualizarBotonMicrofono();
 
+
                 if (
-                    bloqueoHasta <=
-                    Date.now()
-                )
+                    bloqueoHasta <= Date.now()
+                ) {
+
                     estadoListo();
+                }
             };
     }
+
 
     try {
 
@@ -1449,24 +1551,80 @@ function iniciarReconocimientoVoz() {
     }
 }
 
-window.iniciarReconocimientoVoz =
+
+function detenerReconocimientoVoz() {
+
+    if (
+        reconocimientoVoz &&
+        escuchando
+    ) {
+
+        reconocimientoVoz.stop();
+    }
+
+
+    escuchando =
+        false;
+
+
+    actualizarBotonMicrofono();
+
+
+    if (
+        bloqueoHasta <= Date.now()
+    ) {
+
+        estadoListo();
+    }
+}
+
+
+function actualizarBotonMicrofono() {
+
+    const boton =
+        document.getElementById(
+            "microphoneButton"
+        );
+
+
+    if (!boton)
+        return;
+
+
+    boton.textContent =
+        escuchando
+            ? "●"
+            : "🎙";
+
+
+    boton.title =
+        escuchando
+            ? "Detener escucha"
+            : "Hablar con H.E.C.T.O.R.";
+}
+
+
+window\.iniciarReconocimientoVoz =
     iniciarReconocimientoVoz;
 
 
-/* =========================================================
-   GOOGLE
-   ========================================================= */
+/\* =========================================================
+   BÚSQUEDA GOOGLE
+   \========================================================= \*/
 
 function buscarEnGoogle() {
 
     const campo =
         input();
 
+
     if (!campo)
         return;
 
+
     const consulta =
         campo.value.trim();
+
 
     if (!consulta) {
 
@@ -1474,31 +1632,35 @@ function buscarEnGoogle() {
             "Escribe algo primero y lo buscaré en Google."
         );
 
+
         campo.focus();
 
         return;
     }
 
+
     const url =
-        "https://www.google.com/search?q=" +
+        "[https://www.google.com/search?q=](https://www.google.com/search?q=)" +
         encodeURIComponent(
             consulta
         );
 
-    window.open(
+
+    window\.open(
         url,
-        "_blank",
+        "\_blank",
         "noopener,noreferrer"
     );
 }
 
-window.buscarEnGoogle =
+
+window\.buscarEnGoogle =
     buscarEnGoogle;
 
 
-/* =========================================================
-   HERRAMIENTAS
-   ========================================================= */
+/\* =========================================================
+   CREAR BOTONES EXTRA
+   \========================================================= \*/
 
 function crearHerramientasExtra() {
 
@@ -1507,12 +1669,14 @@ function crearHerramientasExtra() {
             ".input-area"
         );
 
+
     if (!area)
         return;
 
-    /*
-     * MICROFONO
-     */
+
+    /\*
+     \* Micrófono
+     \*/
 
     if (
         !document.getElementById(
@@ -1520,49 +1684,53 @@ function crearHerramientasExtra() {
         )
     ) {
 
-        const boton =
-            document.createElement(
-                "button"
-            );
+        const botonMicrofono =
+            document.createElement("button");
 
-        boton.id =
+
+        botonMicrofono.id =
             "microphoneButton";
 
-        boton.className =
+
+        botonMicrofono.className =
             "icon-button";
 
-        boton.type =
-            "button";
 
-        boton.textContent =
+        botonMicrofono.textContent =
             "🎙";
 
-        boton.title =
+
+        botonMicrofono.title =
             "Hablar con H.E.C.T.O.R.";
 
-        boton.addEventListener(
-            "click",
-            iniciarReconocimientoVoz
-        );
+
+        botonMicrofono.onclick =
+            iniciarReconocimientoVoz;
+
+
+        /\*
+         \* Lo colocamos antes del input.
+         \*/
 
         const campo =
             input();
 
+
         if (campo)
             area.insertBefore(
-                boton,
+                botonMicrofono,
                 campo
             );
         else
             area.appendChild(
-                boton
+                botonMicrofono
             );
     }
 
 
-    /*
-     * GOOGLE
-     */
+    /\*
+     \* Google
+     \*/
 
     if (
         !document.getElementById(
@@ -1570,41 +1738,40 @@ function crearHerramientasExtra() {
         )
     ) {
 
-        const boton =
-            document.createElement(
-                "button"
-            );
+        const botonBusqueda =
+            document.createElement("button");
 
-        boton.id =
+
+        botonBusqueda.id =
             "searchButton";
 
-        boton.className =
+
+        botonBusqueda.className =
             "icon-button";
 
-        boton.type =
-            "button";
 
-        boton.textContent =
+        botonBusqueda.textContent =
             "⌕";
 
-        boton.title =
+
+        botonBusqueda.title =
             "Buscar en Google";
 
-        boton.addEventListener(
-            "click",
-            buscarEnGoogle
-        );
+
+        botonBusqueda.onclick =
+            buscarEnGoogle;
+
 
         area.appendChild(
-            boton
+            botonBusqueda
         );
     }
 }
 
 
-/* =========================================================
+/\* =========================================================
    RELOJ
-   ========================================================= */
+   \========================================================= \*/
 
 function actualizarReloj() {
 
@@ -1613,39 +1780,64 @@ function actualizarReloj() {
             "clock"
         );
 
+
     if (!reloj)
         return;
 
+
+    const ahora =
+        new Date();
+
+
     reloj.textContent =
-        new Date().toLocaleTimeString(
+        ahora.toLocaleTimeString(
             "es-AR",
             {
-                hour: "2-digit",
-                minute: "2-digit"
+                hour:
+                    "2-digit",
+
+                minute:
+                    "2-digit"
             }
         );
 }
 
 
-/* =========================================================
-   INPUT
-   ========================================================= */
+setInterval(
+    actualizarReloj,
+    1000
+);
+
+
+/\* =========================================================
+   ENTER
+   \========================================================= \*/
 
 function configurarInput() {
 
     const campo =
         input();
 
+
     if (!campo)
         return;
+
+
+    /\*
+     \* Evitamos agregar múltiples
+     \* listeners si el script se
+     \* vuelve a cargar.
+     \*/
 
     if (
         campo.dataset.hectorReady
     )
         return;
 
+
     campo.dataset.hectorReady =
         "true";
+
 
     campo.addEventListener(
         "keydown",
@@ -1665,23 +1857,20 @@ function configurarInput() {
 }
 
 
-/* =========================================================
-   ATAJOS
-   ========================================================= */
+/\* =========================================================
+   ATAJOS DE TECLADO
+   \========================================================= \*/
 
 function configurarAtajos() {
-
-    if (
-        document.body.dataset.hectorShortcuts
-    )
-        return;
-
-    document.body.dataset.hectorShortcuts =
-        "true";
 
     document.addEventListener(
         "keydown",
         event => {
+
+            /\*
+             \* Ctrl + K
+             \* Enfoca el chat.
+             \*/
 
             if (
                 event.ctrlKey &&
@@ -1690,94 +1879,56 @@ function configurarAtajos() {
 
                 event.preventDefault();
 
+
                 const campo =
                     input();
+
 
                 if (campo)
                     campo.focus();
             }
 
-            if (
-                event.ctrlKey &&
-                event.key.toLowerCase() === "i"
-            ) {
 
-                event.preventDefault();
-
-                cambiarInterfaz();
-            }
+            /\*
+             \* Escape
+             \* Detiene la voz.
+             \*/
 
             if (
-                event.key ===
-                "Escape"
+                event.key === "Escape"
             ) {
 
                 if (
-                    window.speechSynthesis
-                )
+                    window\.speechSynthesis
+                ) {
+
                     speechSynthesis.cancel();
+                }
             }
         }
     );
 }
 
 
-/* =========================================================
+/\* =========================================================
    INICIALIZACIÓN
-   ========================================================= */
+   \========================================================= \*/
 
-function iniciarHECTOR() {
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-    inicializarInterfaz();
+        configurarInput();
 
-    configurarInput();
+        configurarAtajos();
 
-    configurarAtajos();
+        crearHerramientasExtra();
 
-    crearHerramientasExtra();
+        restaurarConversacion();
 
-    restaurarConversacion();
+        actualizarReloj();
 
-    actualizarReloj();
+        estadoListo();
 
-    estadoListo();
-}
-
-
-function inicializarInterfaz() {
-
-    const interfaz =
-        obtenerInterfazActual();
-
-    aplicarInterfaz(
-        interfaz.id
-    );
-
-    crearBotonInterfaz();
-}
-
-
-setInterval(
-    actualizarReloj,
-    1000
+    }
 );
-
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        iniciarHECTOR,
-        {
-            once: true
-        }
-    );
-
-} else {
-
-    iniciarHECTOR();
-}
-```
