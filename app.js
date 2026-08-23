@@ -1,8 +1,8 @@
 ```javascript
 /* =========================================================
    H.E.C.T.O.R. OS
-   Conversational Core v3
-   HUD / Interfaces / Voice / Memory / Tools
+   Conversational Core v3.1
+   Sistema integrado
    ========================================================= */
 
 const WORKER_URL =
@@ -19,252 +19,16 @@ const INTERFACE_KEY =
 
 
 /* =========================================================
-   ESTADO DEL SISTEMA
+   ESTADO
    ========================================================= */
 
 let procesando = false;
-
 let vozActiva = false;
-
 let escuchando = false;
-
 let reconocimientoVoz = null;
 
 let bloqueoHasta = 0;
-
 let intervaloBloqueo = null;
-
-
-/* =========================================================
-   INTERFACES
-   ========================================================= */
-
-const INTERFACES = [
-    {
-        id: "hud",
-        nombre: "H.E.C.T.O.R. HUD",
-        tema: "theme-hud"
-    },
-
-    {
-        id: "tactical",
-        nombre: "TACTICAL",
-        tema: "theme-tactical"
-    },
-
-    {
-        id: "research",
-        nombre: "RESEARCH",
-        tema: "theme-research"
-    },
-
-    {
-        id: "core",
-        nombre: "CORE",
-        tema: "theme-core"
-    }
-];
-
-
-function obtenerInterfazActual() {
-
-    const guardada =
-        localStorage.getItem(
-            INTERFACE_KEY
-        );
-
-    const encontrada =
-        INTERFACES.find(
-            interfaz =>
-                interfaz.id === guardada
-        );
-
-    return encontrada || INTERFACES[0];
-}
-
-
-function aplicarInterfaz(id) {
-
-    const interfaz =
-        INTERFACES.find(
-            item =>
-                item.id === id
-        ) || INTERFACES[0];
-
-
-    const body =
-        document.body;
-
-
-    if (!body)
-        return;
-
-
-    INTERFACES.forEach(
-        item => {
-
-            body.classList.remove(
-                item.tema
-            );
-
-        }
-    );
-
-
-    body.classList.add(
-        interfaz.tema
-    );
-
-
-    localStorage.setItem(
-        INTERFACE_KEY,
-        interfaz.id
-    );
-
-
-    actualizarNombreInterfaz(
-        interfaz
-    );
-}
-
-
-function actualizarNombreInterfaz(
-    interfaz
-) {
-
-    const elemento =
-        document.getElementById(
-            "interfaceName"
-        );
-
-
-    if (elemento) {
-
-        elemento.textContent =
-            interfaz.nombre;
-    }
-}
-
-
-function cambiarInterfaz() {
-
-    const actual =
-        obtenerInterfazActual();
-
-
-    const indice =
-        INTERFACES.findIndex(
-            item =>
-                item.id === actual.id
-        );
-
-
-    const siguiente =
-        INTERFACES[
-            (indice + 1) %
-            INTERFACES.length
-        ];
-
-
-    aplicarInterfaz(
-        siguiente.id
-    );
-
-
-    addMessage(
-        `Interfaz cambiada a ${siguiente.nombre}.`
-    );
-}
-
-
-window.cambiarInterfaz =
-    cambiarInterfaz;
-
-
-function crearBotonInterfaz() {
-
-    const topbar =
-        document.querySelector(
-            ".topbar"
-        );
-
-
-    if (!topbar)
-        return;
-
-
-    if (
-        document.getElementById(
-            "interfaceButton"
-        )
-    )
-        return;
-
-
-    const boton =
-        document.createElement(
-            "button"
-        );
-
-
-    boton.id =
-        "interfaceButton";
-
-
-    boton.className =
-        "interface-button";
-
-
-    boton.type =
-        "button";
-
-
-    boton.textContent =
-        "INTERFACE";
-
-
-    boton.title =
-        "Cambiar interfaz de H.E.C.T.O.R.";
-
-
-    boton.onclick =
-        cambiarInterfaz;
-
-
-    const status =
-        document.querySelector(
-            ".system-status"
-        );
-
-
-    if (status) {
-
-        status.appendChild(
-            boton
-        );
-
-    } else {
-
-        topbar.appendChild(
-            boton
-        );
-    }
-}
-
-
-function inicializarInterfaz() {
-
-    const interfaz =
-        obtenerInterfazActual();
-
-
-    aplicarInterfaz(
-        interfaz.id
-    );
-
-
-    crearBotonInterfaz();
-}
 
 
 /* =========================================================
@@ -275,33 +39,24 @@ function input() {
     return document.getElementById("input");
 }
 
-
 function messages() {
     return document.getElementById("messages");
 }
-
 
 function sendButton() {
     return document.getElementById("sendButton");
 }
 
-
 function voiceButton() {
     return document.getElementById("voiceButton");
 }
 
-
 function thinkingStatus() {
-    return document.getElementById(
-        "thinkingStatus"
-    );
+    return document.getElementById("thinkingStatus");
 }
 
-
 function coreStatus() {
-    return document.getElementById(
-        "coreStatus"
-    );
+    return document.getElementById("coreStatus");
 }
 
 
@@ -310,7 +65,6 @@ function coreStatus() {
    ========================================================= */
 
 function normalizar(texto) {
-
     return String(texto || "")
         .toLowerCase()
         .normalize("NFD")
@@ -319,99 +73,45 @@ function normalizar(texto) {
 }
 
 
-function escaparTexto(texto) {
-
-    return String(texto || "");
-}
-
-
-function esperar(ms) {
-
-    return new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                ms
-            )
-    );
-}
-
-
 /* =========================================================
-   CHAT VISUAL
+   CHAT
    ========================================================= */
 
-function addMessage(
-    texto,
-    tipo = "meca"
-) {
+function addMessage(texto, tipo = "meca") {
 
-    const caja =
-        messages();
+    const caja = messages();
 
+    if (!caja) return;
 
-    if (!caja)
-        return;
-
-
-    const mensaje =
-        document.createElement(
-            "div"
-        );
-
+    const mensaje = document.createElement("div");
 
     mensaje.className =
         "message " + tipo;
 
-
-    if (
-        tipo === "meca"
-    ) {
+    if (tipo === "meca") {
 
         const nombre =
-            document.createElement(
-                "strong"
-            );
-
+            document.createElement("strong");
 
         nombre.textContent =
             "H.E.C.T.O.R.";
 
-
         const contenido =
-            document.createElement(
-                "span"
-            );
-
+            document.createElement("span");
 
         contenido.textContent =
-            escaparTexto(
-                texto
-            );
+            String(texto || "");
 
-
-        mensaje.appendChild(
-            nombre
-        );
-
-
-        mensaje.appendChild(
-            contenido
-        );
+        mensaje.appendChild(nombre);
+        mensaje.appendChild(contenido);
 
     } else {
 
         mensaje.textContent =
-            escaparTexto(
-                texto
-            );
+            String(texto || "");
     }
 
-
-    caja.appendChild(
-        mensaje
-    );
-
+    caja.appendChild(mensaje);
 
     caja.scrollTop =
         caja.scrollHeight;
@@ -431,24 +131,14 @@ function obtenerHistorial() {
                 CHAT_HISTORY_KEY
             );
 
-
         if (!datos)
             return [];
 
-
         const historial =
-            JSON.parse(
-                datos
-            );
+            JSON.parse(datos);
 
-
-        if (
-            !Array.isArray(
-                historial
-            )
-        )
+        if (!Array.isArray(historial))
             return [];
-
 
         return historial.filter(
             mensaje =>
@@ -463,7 +153,7 @@ function obtenerHistorial() {
     } catch (error) {
 
         console.warn(
-            "No se pudo leer el historial:",
+            "Error leyendo historial:",
             error
         );
 
@@ -472,27 +162,21 @@ function obtenerHistorial() {
 }
 
 
-function guardarHistorial(
-    historial
-) {
+function guardarHistorial(historial) {
 
     try {
-
-        const limitado =
-            historial.slice(-20);
-
 
         localStorage.setItem(
             CHAT_HISTORY_KEY,
             JSON.stringify(
-                limitado
+                historial.slice(-20)
             )
         );
 
     } catch (error) {
 
         console.warn(
-            "No se pudo guardar el historial:",
+            "Error guardando historial:",
             error
         );
     }
@@ -507,18 +191,11 @@ function registrarConversacion(
     const historial =
         obtenerHistorial();
 
-
     historial.push({
-
         role: role,
-
         text: String(text),
-
-        timestamp:
-            Date.now()
-
+        timestamp: Date.now()
     });
-
 
     guardarHistorial(
         historial
@@ -526,50 +203,36 @@ function registrarConversacion(
 }
 
 
-/* =========================================================
-   RESTAURAR CHAT
-   ========================================================= */
-
 function restaurarConversacion() {
 
     const historial =
         obtenerHistorial();
 
-
     const caja =
         messages();
-
 
     if (!caja)
         return;
 
+    if (historial.length === 0)
+        return;
 
-    if (
-        historial.length > 0
-    ) {
+    caja.innerHTML = "";
 
-        caja.innerHTML = "";
+    historial.forEach(
+        mensaje => {
 
+            addMessage(
+                mensaje.text,
+                mensaje.role === "user"
+                    ? "usuario"
+                    : "meca"
+            );
 
-        historial.forEach(
-            mensaje => {
-
-                addMessage(
-                    mensaje.text,
-                    mensaje.role === "user"
-                        ? "usuario"
-                        : "meca"
-                );
-
-            }
-        );
-    }
+        }
+    );
 }
 
-
-/* =========================================================
-   LIMPIAR CONVERSACIÓN
-   ========================================================= */
 
 function limpiarConversacion() {
 
@@ -577,20 +240,16 @@ function limpiarConversacion() {
         CHAT_HISTORY_KEY
     );
 
-
     const caja =
         messages();
 
-
     if (caja)
         caja.innerHTML = "";
-
 
     addMessage(
         "Historial conversacional eliminado. Núcleo listo."
     );
 }
-
 
 window.limpiarConversacion =
     limpiarConversacion;
@@ -609,20 +268,13 @@ function obtenerBitacora() {
                 BITACORA_KEY
             );
 
-
         if (!datos)
             return [];
 
-
         const notas =
-            JSON.parse(
-                datos
-            );
+            JSON.parse(datos);
 
-
-        return Array.isArray(
-            notas
-        )
+        return Array.isArray(notas)
             ? notas
             : [];
 
@@ -633,34 +285,21 @@ function obtenerBitacora() {
 }
 
 
-function guardarNota(
-    texto
-) {
+function guardarNota(texto) {
 
     const notas =
         obtenerBitacora();
 
-
     notas.push({
-
-        texto:
-            String(texto),
-
-        fecha:
-            new Date().toLocaleString(
-                "es-AR"
-            )
-
+        texto: String(texto),
+        fecha: new Date().toLocaleString("es-AR")
     });
-
 
     try {
 
         localStorage.setItem(
             BITACORA_KEY,
-            JSON.stringify(
-                notas
-            )
+            JSON.stringify(notas)
         );
 
     } catch (error) {
@@ -678,10 +317,7 @@ function mostrarBitacora() {
     const notas =
         obtenerBitacora();
 
-
-    if (
-        notas.length === 0
-    ) {
+    if (notas.length === 0) {
 
         addMessage(
             "La bitácora está vacía."
@@ -690,17 +326,12 @@ function mostrarBitacora() {
         return;
     }
 
-
     addMessage(
         `BITÁCORA — ${notas.length} registro(s)`
     );
 
-
     notas.forEach(
-        (
-            nota,
-            indice
-        ) => {
+        (nota, indice) => {
 
             addMessage(
                 `${indice + 1}. [${nota.fecha}] ${nota.texto}`
@@ -710,7 +341,6 @@ function mostrarBitacora() {
     );
 }
 
-
 window.mostrarBitacora =
     mostrarBitacora;
 
@@ -719,20 +349,13 @@ window.mostrarBitacora =
    COMANDOS DE BITÁCORA
    ========================================================= */
 
-function procesarBitacora(
-    texto
-) {
+function procesarBitacora(texto) {
 
     const original =
-        String(texto || "")
-            .trim();
-
+        String(texto || "").trim();
 
     const limpio =
-        normalizar(
-            original
-        );
-
+        normalizar(original);
 
     if (
         limpio === "ver bitacora" ||
@@ -746,35 +369,22 @@ function procesarBitacora(
         return true;
     }
 
-
     const patrones = [
-
         "hector anota ",
         "hector guarda ",
         "anota ",
         "guardar en bitacora ",
         "guarda en bitacora "
-
     ];
 
+    for (const patron of patrones) {
 
-    for (
-        const patron of patrones
-    ) {
-
-        if (
-            limpio.startsWith(
-                patron
-            )
-        ) {
+        if (limpio.startsWith(patron)) {
 
             const nota =
                 original
-                    .substring(
-                        patron.length
-                    )
+                    .substring(patron.length)
                     .trim();
-
 
             if (!nota) {
 
@@ -785,23 +395,195 @@ function procesarBitacora(
                 return true;
             }
 
-
-            guardarNota(
-                nota
-            );
-
+            guardarNota(nota);
 
             addMessage(
                 "Anotado. El registro quedó guardado en la bitácora."
             );
 
-
             return true;
         }
     }
 
-
     return false;
+}
+
+
+/* =========================================================
+   INTERFACES
+   ========================================================= */
+
+const INTERFACES = [
+    {
+        id: "hud",
+        nombre: "H.E.C.T.O.R. HUD",
+        clase: "theme-hud"
+    },
+    {
+        id: "tactical",
+        nombre: "TACTICAL",
+        clase: "theme-tactical"
+    },
+    {
+        id: "research",
+        nombre: "RESEARCH",
+        clase: "theme-research"
+    },
+    {
+        id: "core",
+        nombre: "CORE",
+        clase: "theme-core"
+    }
+];
+
+
+function obtenerInterfazActual() {
+
+    const guardada =
+        localStorage.getItem(
+            INTERFACE_KEY
+        );
+
+    return (
+        INTERFACES.find(
+            interfaz =>
+                interfaz.id === guardada
+        ) ||
+        INTERFACES[0]
+    );
+}
+
+
+function aplicarInterfaz(id, anunciar = false) {
+
+    const interfaz =
+        INTERFACES.find(
+            item =>
+                item.id === id
+        ) ||
+        INTERFACES[0];
+
+    const body =
+        document.body;
+
+    if (!body)
+        return;
+
+    INTERFACES.forEach(
+        item => {
+
+            body.classList.remove(
+                item.clase
+            );
+
+        }
+    );
+
+    body.classList.add(
+        interfaz.clase
+    );
+
+    localStorage.setItem(
+        INTERFACE_KEY,
+        interfaz.id
+    );
+
+    const indicador =
+        document.getElementById(
+            "interfaceName"
+        );
+
+    if (indicador) {
+
+        indicador.textContent =
+            interfaz.nombre;
+    }
+
+    if (anunciar) {
+
+        addMessage(
+            `Interfaz activa: ${interfaz.nombre}.`
+        );
+    }
+}
+
+
+function cambiarInterfaz() {
+
+    const actual =
+        obtenerInterfazActual();
+
+    const indice =
+        INTERFACES.findIndex(
+            item =>
+                item.id === actual.id
+        );
+
+    const siguiente =
+        INTERFACES[
+            (indice + 1) %
+            INTERFACES.length
+        ];
+
+    aplicarInterfaz(
+        siguiente.id,
+        true
+    );
+}
+
+window.cambiarInterfaz =
+    cambiarInterfaz;
+
+
+/* =========================================================
+   BOTÓN DE INTERFAZ
+   ========================================================= */
+
+function crearBotonInterfaz() {
+
+    if (
+        document.getElementById(
+            "interfaceButton"
+        )
+    )
+        return;
+
+    const status =
+        document.querySelector(
+            ".system-status"
+        );
+
+    if (!status)
+        return;
+
+    const boton =
+        document.createElement(
+            "button"
+        );
+
+    boton.id =
+        "interfaceButton";
+
+    boton.type =
+        "button";
+
+    boton.className =
+        "interface-button";
+
+    boton.textContent =
+        "INTERFACE";
+
+    boton.title =
+        "Cambiar interfaz";
+
+    boton.addEventListener(
+        "click",
+        cambiarInterfaz
+    );
+
+    status.appendChild(
+        boton
+    );
 }
 
 
@@ -809,15 +591,10 @@ function procesarBitacora(
    COMANDOS DEL SISTEMA
    ========================================================= */
 
-function procesarComandoSistema(
-    texto
-) {
+function procesarComandoSistema(texto) {
 
     const limpio =
-        normalizar(
-            texto
-        );
-
+        normalizar(texto);
 
     if (
         limpio === "limpiar conversacion" ||
@@ -830,7 +607,6 @@ function procesarComandoSistema(
         return true;
     }
 
-
     if (
         limpio === "detener voz" ||
         limpio === "silenciar" ||
@@ -840,7 +616,6 @@ function procesarComandoSistema(
         vozActiva =
             false;
 
-
         if (
             window.speechSynthesis
         ) {
@@ -848,24 +623,19 @@ function procesarComandoSistema(
             speechSynthesis.cancel();
         }
 
-
         const boton =
             voiceButton();
-
 
         if (boton)
             boton.textContent =
                 "◉";
 
-
         addMessage(
             "Salida de voz desactivada."
         );
 
-
         return true;
     }
-
 
     if (
         limpio === "activar voz" ||
@@ -875,24 +645,19 @@ function procesarComandoSistema(
         vozActiva =
             true;
 
-
         const boton =
             voiceButton();
-
 
         if (boton)
             boton.textContent =
                 "◉ ON";
 
-
         addMessage(
             "Salida de voz activada."
         );
 
-
         return true;
     }
-
 
     if (
         limpio === "cambiar interfaz" ||
@@ -905,112 +670,70 @@ function procesarComandoSistema(
         return true;
     }
 
-
     return false;
 }
 
 
 /* =========================================================
-   ESTADO VISUAL
+   ESTADO
    ========================================================= */
 
 function estadoProcesando() {
 
-    const status =
-        thinkingStatus();
-
-
-    const core =
-        coreStatus();
-
-
-    if (status)
-        status.textContent =
+    if (thinkingStatus())
+        thinkingStatus().textContent =
             "PROCESSING";
 
-
-    if (core)
-        core.textContent =
+    if (coreStatus())
+        coreStatus().textContent =
             "ANALYZING";
 }
 
 
 function estadoListo() {
 
-    const status =
-        thinkingStatus();
-
-
-    const core =
-        coreStatus();
-
-
-    if (status)
-        status.textContent =
+    if (thinkingStatus())
+        thinkingStatus().textContent =
             "READY";
 
-
-    if (core)
-        core.textContent =
+    if (coreStatus())
+        coreStatus().textContent =
             "READY";
 }
 
 
 function estadoError() {
 
-    const status =
-        thinkingStatus();
-
-
-    const core =
-        coreStatus();
-
-
-    if (status)
-        status.textContent =
+    if (thinkingStatus())
+        thinkingStatus().textContent =
             "ERROR";
 
-
-    if (core)
-        core.textContent =
+    if (coreStatus())
+        coreStatus().textContent =
             "ERROR";
 }
 
 
-function estadoEspera(
-    segundos
-) {
+function estadoEspera(segundos) {
 
-    const status =
-        thinkingStatus();
-
-
-    const core =
-        coreStatus();
-
-
-    if (status)
-        status.textContent =
+    if (thinkingStatus())
+        thinkingStatus().textContent =
             `WAIT ${segundos}s`;
 
-
-    if (core)
-        core.textContent =
+    if (coreStatus())
+        coreStatus().textContent =
             "RATE LIMIT";
 }
 
 
 /* =========================================================
-   ERRORES DEL WORKER
+   ERRORES GEMINI
    ========================================================= */
 
-function obtenerObjetoError(
-    datos
-) {
+function obtenerObjetoError(datos) {
 
     if (!datos)
         return null;
-
 
     if (
         datos.error &&
@@ -1019,7 +742,6 @@ function obtenerObjetoError(
 
         return datos.error;
     }
-
 
     if (
         datos.details &&
@@ -1030,21 +752,14 @@ function obtenerObjetoError(
         return datos.details.error;
     }
 
-
     return datos;
 }
 
 
-function esRateLimit(
-    datos,
-    status
-) {
+function esRateLimit(datos, status) {
 
     const error =
-        obtenerObjetoError(
-            datos
-        );
-
+        obtenerObjetoError(datos);
 
     const mensaje =
         JSON.stringify(
@@ -1053,51 +768,29 @@ function esRateLimit(
             ""
         ).toLowerCase();
 
-
     return (
-
         status === 429 ||
-
-        mensaje.includes(
-            "too_many_requests"
-        ) ||
-
-        mensaje.includes(
-            "quota exceeded"
-        ) ||
-
-        mensaje.includes(
-            "rate limit"
-        ) ||
-
-        mensaje.includes(
-            "free_tier_requests"
-        )
-
+        mensaje.includes("too_many_requests") ||
+        mensaje.includes("quota exceeded") ||
+        mensaje.includes("rate limit") ||
+        mensaje.includes("free_tier_requests")
     );
 }
 
 
-function extraerSegundosEspera(
-    datos
-) {
+function extraerSegundosEspera(datos) {
 
     const texto =
         JSON.stringify(
-            datos ||
-            ""
+            datos || ""
         );
-
 
     const coincidencia =
         texto.match(
             /retry(?:\s+in)?\s+([0-9]+(?:\.[0-9]+)?)\s*s/i
         );
 
-
-    if (
-        coincidencia
-    ) {
+    if (coincidencia) {
 
         return Math.max(
             1,
@@ -1109,7 +802,6 @@ function extraerSegundosEspera(
         );
     }
 
-
     return 30;
 }
 
@@ -1118,36 +810,24 @@ function extraerSegundosEspera(
    BLOQUEO POR CUOTA
    ========================================================= */
 
-function iniciarBloqueo(
-    segundos
-) {
+function iniciarBloqueo(segundos) {
 
     segundos =
         Math.max(
             1,
-            Math.ceil(
-                segundos
-            )
+            Math.ceil(segundos)
         );
-
 
     bloqueoHasta =
         Date.now() +
         segundos * 1000;
 
-
     actualizarBloqueo();
 
-
-    if (
-        intervaloBloqueo
-    ) {
-
+    if (intervaloBloqueo)
         clearInterval(
             intervaloBloqueo
         );
-    }
-
 
     intervaloBloqueo =
         setInterval(
@@ -1170,39 +850,26 @@ function actualizarBloqueo() {
             )
         );
 
+    if (restante <= 0) {
 
-    if (
-        restante <= 0
-    ) {
-
-        if (
-            intervaloBloqueo
-        ) {
-
+        if (intervaloBloqueo)
             clearInterval(
                 intervaloBloqueo
             );
-        }
-
 
         intervaloBloqueo =
             null;
 
-
         bloqueoHasta =
             0;
-
 
         procesando =
             false;
 
-
         estadoListo();
-
 
         const boton =
             sendButton();
-
 
         if (boton) {
 
@@ -1213,25 +880,20 @@ function actualizarBloqueo() {
                 "➤";
         }
 
-
         return;
     }
-
 
     estadoEspera(
         restante
     );
 
-
     const boton =
         sendButton();
-
 
     if (boton) {
 
         boton.disabled =
             true;
-
 
         boton.textContent =
             `${restante}s`;
@@ -1240,7 +902,7 @@ function actualizarBloqueo() {
 
 
 /* =========================================================
-   MANEJAR ERROR IA
+   ERROR IA
    ========================================================= */
 
 function manejarErrorIA(
@@ -1252,7 +914,6 @@ function manejarErrorIA(
         "Respuesta del Worker:",
         datos
     );
-
 
     if (
         esRateLimit(
@@ -1266,39 +927,19 @@ function manejarErrorIA(
                 datos
             );
 
-
         iniciarBloqueo(
             segundos
         );
 
-
         addMessage(
-            `Límite temporal de procesamiento alcanzado. ` +
+            `Límite temporal alcanzado. ` +
             `H.E.C.T.O.R. podrá continuar en aproximadamente ${segundos} segundos.`
         );
-
 
         return;
     }
 
-
     estadoError();
-
-
-    const error =
-        obtenerObjetoError(
-            datos
-        );
-
-
-    const mensaje =
-        (
-            error &&
-            typeof error.message === "string"
-        )
-            ? error.message
-            : "";
-
 
     if (
         status === 401 ||
@@ -1306,41 +947,23 @@ function manejarErrorIA(
     ) {
 
         addMessage(
-            "La autenticación con el núcleo de IA fue rechazada. " +
-            "La conexión está activa, pero la credencial necesita revisión."
+            "La autenticación con el núcleo de IA fue rechazada. Revisa la credencial del Worker."
         );
-
 
         return;
     }
 
-
-    if (
-        status === 400
-    ) {
+    if (status === 400) {
 
         addMessage(
-            "El núcleo rechazó la solicitud. " +
-            "Puede tratarse de un formato o parámetro no válido."
+            "El núcleo rechazó la solicitud por un formato no válido."
         );
-
 
         return;
     }
 
-
-    if (mensaje) {
-
-        console.warn(
-            "Detalle IA:",
-            mensaje
-        );
-    }
-
-
     addMessage(
-        "El núcleo de IA encontró un problema al procesar la solicitud. " +
-        "Revisa la consola para obtener el detalle técnico."
+        "El núcleo de IA encontró un problema al procesar la solicitud."
     );
 }
 
@@ -1349,15 +972,10 @@ function manejarErrorIA(
    IA
    ========================================================= */
 
-async function hablarConIA(
-    texto
-) {
+async function hablarConIA(texto) {
 
-    if (
-        procesando
-    )
+    if (procesando)
         return;
-
 
     if (
         bloqueoHasta >
@@ -1369,52 +987,38 @@ async function hablarConIA(
         return;
     }
 
-
     procesando =
         true;
 
-
     estadoProcesando();
-
 
     try {
 
         const historial =
             obtenerHistorial();
 
-
         const respuesta =
             await fetch(
                 WORKER_URL,
                 {
-
-                    method:
-                        "POST",
+                    method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
                     body:
                         JSON.stringify({
-
                             message:
                                 texto,
-
                             history:
                                 historial
-
                         })
-
                 }
             );
 
-
         let datos;
-
 
         try {
 
@@ -1424,70 +1028,52 @@ async function hablarConIA(
         } catch {
 
             datos = {
-
                 error: {
-
                     message:
-                        "El Worker devolvió una respuesta no válida."
-
+                        "Respuesta no válida del Worker."
                 }
-
             };
         }
 
-
-        if (
-            !respuesta.ok
-        ) {
+        if (!respuesta.ok) {
 
             manejarErrorIA(
                 datos,
                 respuesta.status
             );
 
-
             return;
         }
-
 
         const respuestaIA =
             typeof datos.reply === "string"
                 ? datos.reply.trim()
                 : "";
 
-
-        if (
-            !respuestaIA
-        ) {
+        if (!respuestaIA) {
 
             estadoError();
-
 
             addMessage(
                 "El núcleo respondió, pero no devolvió contenido."
             );
 
-
             return;
         }
-
 
         addMessage(
             respuestaIA,
             "meca"
         );
 
-
         registrarConversacion(
             "assistant",
             respuestaIA
         );
 
-
         hablar(
             respuestaIA
         );
-
 
     } catch (error) {
 
@@ -1496,15 +1082,11 @@ async function hablarConIA(
             error
         );
 
-
         estadoError();
 
-
         addMessage(
-            "No pude establecer comunicación con el núcleo de IA. " +
-            "Comprueba la conexión con el servidor."
+            "No pude establecer comunicación con el núcleo de IA."
         );
-
 
     } finally {
 
@@ -1516,7 +1098,6 @@ async function hablarConIA(
             procesando =
                 false;
 
-
             estadoListo();
         }
     }
@@ -1524,7 +1105,7 @@ async function hablarConIA(
 
 
 /* =========================================================
-   ENVIAR MENSAJE
+   SEND
    ========================================================= */
 
 async function sendMessage() {
@@ -1532,10 +1113,8 @@ async function sendMessage() {
     const campo =
         input();
 
-
     if (!campo)
         return;
-
 
     if (
         procesando ||
@@ -1544,118 +1123,90 @@ async function sendMessage() {
     )
         return;
 
-
     const texto =
         campo.value.trim();
 
-
     if (!texto)
         return;
-
 
     addMessage(
         texto,
         "usuario"
     );
 
-
     campo.value =
         "";
-
 
     registrarConversacion(
         "user",
         texto
     );
 
-
     if (
         procesarComandoSistema(
             texto
         )
-    ) {
-
+    )
         return;
-    }
-
 
     if (
         procesarBitacora(
             texto
         )
-    ) {
-
+    )
         return;
-    }
-
 
     await hablarConIA(
         texto
     );
 }
 
-
 window.sendMessage =
     sendMessage;
 
 
 /* =========================================================
-   VOZ — SALIDA
+   VOZ
    ========================================================= */
 
-function hablar(
-    texto
-) {
+function hablar(texto) {
 
-    if (
-        !vozActiva
-    )
+    if (!vozActiva)
         return;
 
-
-    if (
-        !window.speechSynthesis
-    )
+    if (!window.speechSynthesis)
         return;
-
 
     speechSynthesis.cancel();
-
 
     const voz =
         new SpeechSynthesisUtterance(
             texto
         );
 
-
     voz.lang =
         "es-AR";
 
-
+    /*
+     * Voz más grave y pausada.
+     * La voz disponible depende del navegador/SO.
+     */
     voz.rate =
         0.90;
-
 
     voz.pitch =
         0.65;
 
-
     voz.volume =
         1;
-
 
     voz.onstart =
         () => {
 
-            const status =
-                thinkingStatus();
-
-
-            if (status)
-                status.textContent =
+            if (thinkingStatus())
+                thinkingStatus().textContent =
                     "SPEAKING";
         };
-
 
     voz.onend =
         () => {
@@ -1663,12 +1214,9 @@ function hablar(
             if (
                 bloqueoHasta <=
                 Date.now()
-            ) {
-
+            )
                 estadoListo();
-            }
         };
-
 
     speechSynthesis.speak(
         voz
@@ -1681,26 +1229,16 @@ function toggleVoice() {
     vozActiva =
         !vozActiva;
 
-
     const boton =
         voiceButton();
 
-
-    if (
-        vozActiva
-    ) {
+    if (vozActiva) {
 
         if (boton)
             boton.textContent =
                 "◉ ON";
 
-
         addMessage(
-            "Salida de voz activada."
-        );
-
-
-        hablar(
             "Salida de voz activada."
         );
 
@@ -1710,14 +1248,10 @@ function toggleVoice() {
             boton.textContent =
                 "◉";
 
-
         if (
             window.speechSynthesis
-        ) {
-
+        )
             speechSynthesis.cancel();
-        }
-
 
         addMessage(
             "Salida de voz desactivada."
@@ -1725,13 +1259,12 @@ function toggleVoice() {
     }
 }
 
-
 window.toggleVoice =
     toggleVoice;
 
 
 /* =========================================================
-   RECONOCIMIENTO DE VOZ
+   MICROFONO
    ========================================================= */
 
 function obtenerReconocimientoVoz() {
@@ -1744,23 +1277,66 @@ function obtenerReconocimientoVoz() {
 }
 
 
+function actualizarBotonMicrofono() {
+
+    const boton =
+        document.getElementById(
+            "microphoneButton"
+        );
+
+    if (!boton)
+        return;
+
+    boton.textContent =
+        escuchando
+            ? "●"
+            : "🎙";
+
+    boton.title =
+        escuchando
+            ? "Detener escucha"
+            : "Hablar con H.E.C.T.O.R.";
+}
+
+
+function detenerReconocimientoVoz() {
+
+    if (
+        reconocimientoVoz &&
+        escuchando
+    ) {
+
+        try {
+            reconocimientoVoz.stop();
+        } catch {}
+    }
+
+    escuchando =
+        false;
+
+    actualizarBotonMicrofono();
+
+    if (
+        bloqueoHasta <=
+        Date.now()
+    )
+        estadoListo();
+}
+
+
 function iniciarReconocimientoVoz() {
 
     const SpeechRecognition =
         obtenerReconocimientoVoz();
 
-
     if (!SpeechRecognition) {
 
         addMessage(
-            "El navegador no admite entrada por voz. " +
-            "Prueba con Chrome o Edge."
+            "Este navegador no admite entrada por voz. Prueba con Chrome o Edge."
         );
-
 
         return;
     }
-
 
     if (escuchando) {
 
@@ -1769,28 +1345,22 @@ function iniciarReconocimientoVoz() {
         return;
     }
 
-
     if (!reconocimientoVoz) {
 
         reconocimientoVoz =
             new SpeechRecognition();
 
-
         reconocimientoVoz.lang =
             "es-AR";
-
 
         reconocimientoVoz.continuous =
             false;
 
-
         reconocimientoVoz.interimResults =
             false;
 
-
         reconocimientoVoz.maxAlternatives =
             1;
-
 
         reconocimientoVoz.onstart =
             () => {
@@ -1798,65 +1368,44 @@ function iniciarReconocimientoVoz() {
                 escuchando =
                     true;
 
-
                 actualizarBotonMicrofono();
 
-
-                const status =
-                    thinkingStatus();
-
-
-                if (status)
-                    status.textContent =
+                if (thinkingStatus())
+                    thinkingStatus().textContent =
                         "LISTENING";
             };
-
 
         reconocimientoVoz.onresult =
             event => {
 
                 const resultado =
-                    event
-                        .results[0][0]
+                    event.results[0][0]
                         .transcript;
-
 
                 const campo =
                     input();
-
 
                 if (campo) {
 
                     campo.value =
                         resultado;
 
-
                     campo.focus();
                 }
-
-
-                detenerReconocimientoVoz();
             };
-
 
         reconocimientoVoz.onerror =
             event => {
 
                 console.warn(
-                    "Reconocimiento de voz:",
+                    "Micrófono:",
                     event.error
                 );
-
 
                 escuchando =
                     false;
 
-
                 actualizarBotonMicrofono();
-
-
-                estadoListo();
-
 
                 if (
                     event.error ===
@@ -1867,8 +1416,9 @@ function iniciarReconocimientoVoz() {
                         "El navegador bloqueó el acceso al micrófono."
                     );
                 }
-            };
 
+                estadoListo();
+            };
 
         reconocimientoVoz.onend =
             () => {
@@ -1876,20 +1426,15 @@ function iniciarReconocimientoVoz() {
                 escuchando =
                     false;
 
-
                 actualizarBotonMicrofono();
-
 
                 if (
                     bloqueoHasta <=
                     Date.now()
-                ) {
-
+                )
                     estadoListo();
-                }
             };
     }
-
 
     try {
 
@@ -1904,66 +1449,12 @@ function iniciarReconocimientoVoz() {
     }
 }
 
-
-function detenerReconocimientoVoz() {
-
-    if (
-        reconocimientoVoz &&
-        escuchando
-    ) {
-
-        reconocimientoVoz.stop();
-    }
-
-
-    escuchando =
-        false;
-
-
-    actualizarBotonMicrofono();
-
-
-    if (
-        bloqueoHasta <=
-        Date.now()
-    ) {
-
-        estadoListo();
-    }
-}
-
-
-function actualizarBotonMicrofono() {
-
-    const boton =
-        document.getElementById(
-            "microphoneButton"
-        );
-
-
-    if (!boton)
-        return;
-
-
-    boton.textContent =
-        escuchando
-            ? "●"
-            : "🎙";
-
-
-    boton.title =
-        escuchando
-            ? "Detener escucha"
-            : "Hablar con H.E.C.T.O.R.";
-}
-
-
 window.iniciarReconocimientoVoz =
     iniciarReconocimientoVoz;
 
 
 /* =========================================================
-   BÚSQUEDA GOOGLE
+   GOOGLE
    ========================================================= */
 
 function buscarEnGoogle() {
@@ -1971,14 +1462,11 @@ function buscarEnGoogle() {
     const campo =
         input();
 
-
     if (!campo)
         return;
 
-
     const consulta =
         campo.value.trim();
-
 
     if (!consulta) {
 
@@ -1986,19 +1474,16 @@ function buscarEnGoogle() {
             "Escribe algo primero y lo buscaré en Google."
         );
 
-
         campo.focus();
 
         return;
     }
-
 
     const url =
         "https://www.google.com/search?q=" +
         encodeURIComponent(
             consulta
         );
-
 
     window.open(
         url,
@@ -2007,13 +1492,12 @@ function buscarEnGoogle() {
     );
 }
 
-
 window.buscarEnGoogle =
     buscarEnGoogle;
 
 
 /* =========================================================
-   CREAR HERRAMIENTAS EXTRA
+   HERRAMIENTAS
    ========================================================= */
 
 function crearHerramientasExtra() {
@@ -2023,10 +1507,12 @@ function crearHerramientasExtra() {
             ".input-area"
         );
 
-
     if (!area)
         return;
 
+    /*
+     * MICROFONO
+     */
 
     if (
         !document.getElementById(
@@ -2034,51 +1520,49 @@ function crearHerramientasExtra() {
         )
     ) {
 
-        const botonMicrofono =
+        const boton =
             document.createElement(
                 "button"
             );
 
-
-        botonMicrofono.id =
+        boton.id =
             "microphoneButton";
 
-
-        botonMicrofono.className =
+        boton.className =
             "icon-button";
 
+        boton.type =
+            "button";
 
-        botonMicrofono.textContent =
+        boton.textContent =
             "🎙";
 
-
-        botonMicrofono.title =
+        boton.title =
             "Hablar con H.E.C.T.O.R.";
 
-
-        botonMicrofono.onclick =
-            iniciarReconocimientoVoz;
-
+        boton.addEventListener(
+            "click",
+            iniciarReconocimientoVoz
+        );
 
         const campo =
             input();
 
-
-        if (campo) {
-
+        if (campo)
             area.insertBefore(
-                botonMicrofono,
+                boton,
                 campo
             );
-
-        } else {
-
+        else
             area.appendChild(
-                botonMicrofono
+                boton
             );
-        }
     }
 
+
+    /*
+     * GOOGLE
+     */
 
     if (
         !document.getElementById(
@@ -2086,34 +1570,33 @@ function crearHerramientasExtra() {
         )
     ) {
 
-        const botonBusqueda =
+        const boton =
             document.createElement(
                 "button"
             );
 
-
-        botonBusqueda.id =
+        boton.id =
             "searchButton";
 
-
-        botonBusqueda.className =
+        boton.className =
             "icon-button";
 
+        boton.type =
+            "button";
 
-        botonBusqueda.textContent =
+        boton.textContent =
             "⌕";
 
-
-        botonBusqueda.title =
+        boton.title =
             "Buscar en Google";
 
-
-        botonBusqueda.onclick =
-            buscarEnGoogle;
-
+        boton.addEventListener(
+            "click",
+            buscarEnGoogle
+        );
 
         area.appendChild(
-            botonBusqueda
+            boton
         );
     }
 }
@@ -2130,39 +1613,22 @@ function actualizarReloj() {
             "clock"
         );
 
-
     if (!reloj)
         return;
 
-
-    const ahora =
-        new Date();
-
-
     reloj.textContent =
-        ahora.toLocaleTimeString(
+        new Date().toLocaleTimeString(
             "es-AR",
             {
-
-                hour:
-                    "2-digit",
-
-                minute:
-                    "2-digit"
-
+                hour: "2-digit",
+                minute: "2-digit"
             }
         );
 }
 
 
-setInterval(
-    actualizarReloj,
-    1000
-);
-
-
 /* =========================================================
-   ENTER
+   INPUT
    ========================================================= */
 
 function configurarInput() {
@@ -2170,20 +1636,16 @@ function configurarInput() {
     const campo =
         input();
 
-
     if (!campo)
         return;
-
 
     if (
         campo.dataset.hectorReady
     )
         return;
 
-
     campo.dataset.hectorReady =
         "true";
-
 
     campo.addEventListener(
         "keydown",
@@ -2204,7 +1666,7 @@ function configurarInput() {
 
 
 /* =========================================================
-   ATAJOS DE TECLADO
+   ATAJOS
    ========================================================= */
 
 function configurarAtajos() {
@@ -2214,10 +1676,8 @@ function configurarAtajos() {
     )
         return;
 
-
     document.body.dataset.hectorShortcuts =
         "true";
-
 
     document.addEventListener(
         "keydown",
@@ -2230,33 +1690,12 @@ function configurarAtajos() {
 
                 event.preventDefault();
 
-
                 const campo =
                     input();
-
 
                 if (campo)
                     campo.focus();
             }
-
-
-            if (
-                event.key === "Escape"
-            ) {
-
-                if (
-                    window.speechSynthesis
-                ) {
-
-                    speechSynthesis.cancel();
-                }
-            }
-
-
-            /*
-             * Ctrl + I
-             * Cambia la interfaz.
-             */
 
             if (
                 event.ctrlKey &&
@@ -2267,6 +1706,17 @@ function configurarAtajos() {
 
                 cambiarInterfaz();
             }
+
+            if (
+                event.key ===
+                "Escape"
+            ) {
+
+                if (
+                    window.speechSynthesis
+                )
+                    speechSynthesis.cancel();
+            }
         }
     );
 }
@@ -2276,24 +1726,58 @@ function configurarAtajos() {
    INICIALIZACIÓN
    ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
+function iniciarHECTOR() {
 
-        inicializarInterfaz();
+    inicializarInterfaz();
 
-        configurarInput();
+    configurarInput();
 
-        configurarAtajos();
+    configurarAtajos();
 
-        crearHerramientasExtra();
+    crearHerramientasExtra();
 
-        restaurarConversacion();
+    restaurarConversacion();
 
-        actualizarReloj();
+    actualizarReloj();
 
-        estadoListo();
+    estadoListo();
+}
 
-    }
+
+function inicializarInterfaz() {
+
+    const interfaz =
+        obtenerInterfazActual();
+
+    aplicarInterfaz(
+        interfaz.id
+    );
+
+    crearBotonInterfaz();
+}
+
+
+setInterval(
+    actualizarReloj,
+    1000
 );
+
+
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        iniciarHECTOR,
+        {
+            once: true
+        }
+    );
+
+} else {
+
+    iniciarHECTOR();
+}
 ```
