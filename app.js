@@ -1,99 +1,34 @@
 /* =========================================================
-   M.E.C.A. OS
-   APP.JS — Núcleo de conversación
+   H.E.C.T.O.R. OS
+   Conversational Core
    ========================================================= */
 
 const WORKER_URL =
     "https://meca-core.nicomeca121.workers.dev";
+
+const CHAT_HISTORY_KEY =
+    "hector_conversation";
+
+const BITACORA_KEY =
+    "meca_bitacora";
 
 let procesando = false;
 let vozActiva = false;
 
 
 /* =========================================================
-   ELEMENTOS DEL HUD
+   UTILIDADES
    ========================================================= */
 
-function obtenerInput() {
+function input() {
     return document.getElementById("input");
 }
 
-function obtenerMensajes() {
+
+function messages() {
     return document.getElementById("messages");
 }
 
-
-/* =========================================================
-   CHAT
-   ========================================================= */
-
-function agregarMensaje(texto, tipo = "meca") {
-
-    const contenedor = obtenerMensajes();
-
-    if (!contenedor) {
-        console.error("M.E.C.A.: no encuentro #messages");
-        return;
-    }
-
-    const mensaje = document.createElement("div");
-
-    mensaje.classList.add("message");
-
-    if (tipo === "usuario") {
-        mensaje.classList.add("usuario");
-    } else {
-        mensaje.classList.add("meca");
-    }
-
-    mensaje.textContent = texto;
-
-    contenedor.appendChild(mensaje);
-
-    contenedor.scrollTop = contenedor.scrollHeight;
-}
-
-
-function mostrarProcesando() {
-
-    const contenedor = obtenerMensajes();
-
-    if (!contenedor) return;
-
-    const anterior =
-        document.getElementById("meca-processing");
-
-    if (anterior) anterior.remove();
-
-    const mensaje =
-        document.createElement("div");
-
-    mensaje.id = "meca-processing";
-    mensaje.className = "message meca";
-    mensaje.textContent =
-        "M.E.C.A.: procesando...";
-
-    contenedor.appendChild(mensaje);
-
-    contenedor.scrollTop =
-        contenedor.scrollHeight;
-}
-
-
-function quitarProcesando() {
-
-    const elemento =
-        document.getElementById("meca-processing");
-
-    if (elemento) {
-        elemento.remove();
-    }
-}
-
-
-/* =========================================================
-   NORMALIZACIÓN
-   ========================================================= */
 
 function normalizar(texto) {
 
@@ -106,39 +41,194 @@ function normalizar(texto) {
 
 
 /* =========================================================
-   BITÁCORA
+   CHAT VISUAL
    ========================================================= */
 
-const BITACORA_KEY =
-    "meca_bitacora";
+function addMessage(texto, tipo = "meca") {
 
+    const caja = messages();
+
+    if (!caja) return;
+
+
+    const mensaje =
+        document.createElement("div");
+
+    mensaje.className =
+        "message " + tipo;
+
+
+    if (tipo === "meca") {
+
+        const nombre =
+            document.createElement("strong");
+
+        nombre.textContent =
+            "H.E.C.T.O.R.";
+
+        const contenido =
+            document.createElement("span");
+
+        contenido.textContent =
+            texto;
+
+        mensaje.appendChild(nombre);
+        mensaje.appendChild(contenido);
+
+    } else {
+
+        mensaje.textContent =
+            texto;
+    }
+
+
+    caja.appendChild(mensaje);
+
+    caja.scrollTop =
+        caja.scrollHeight;
+}
+
+
+/* =========================================================
+   HISTORIAL CONVERSACIONAL
+   ========================================================= */
+
+function obtenerHistorial() {
+
+    try {
+
+        const datos =
+            localStorage.getItem(
+                CHAT_HISTORY_KEY
+            );
+
+        if (!datos) return [];
+
+        const historial =
+            JSON.parse(datos);
+
+        return Array.isArray(historial)
+            ? historial
+            : [];
+
+    } catch {
+
+        return [];
+    }
+}
+
+
+function guardarHistorial(historial) {
+
+    /*
+     * Conservamos los últimos 16 mensajes.
+     * Esto evita que el navegador acumule
+     * una cantidad gigantesca de información.
+     */
+
+    const limitado =
+        historial.slice(-16);
+
+    localStorage.setItem(
+        CHAT_HISTORY_KEY,
+        JSON.stringify(limitado)
+    );
+}
+
+
+function registrarConversacion(
+    role,
+    text
+) {
+
+    const historial =
+        obtenerHistorial();
+
+    historial.push({
+
+        role: role,
+
+        text: text,
+
+        timestamp:
+            Date.now()
+
+    });
+
+    guardarHistorial(
+        historial
+    );
+}
+
+
+/* =========================================================
+   RESTAURAR CHAT
+   ========================================================= */
+
+function restaurarConversacion() {
+
+    const historial =
+        obtenerHistorial();
+
+
+    if (
+        historial.length === 0
+    ) {
+        return;
+    }
+
+
+    const caja =
+        messages();
+
+    if (!caja) return;
+
+
+    /*
+     * Dejamos el mensaje inicial
+     * del sistema y añadimos el historial.
+     */
+
+    historial.forEach(
+        mensaje => {
+
+            if (
+                mensaje.role === "user"
+            ) {
+
+                addMessage(
+                    mensaje.text,
+                    "usuario"
+                );
+
+            } else {
+
+                addMessage(
+                    mensaje.text,
+                    "meca"
+                );
+            }
+
+        }
+    );
+}
+
+
+/* =========================================================
+   BITÁCORA
+   ========================================================= */
 
 function obtenerBitacora() {
 
     try {
 
-        const datos =
-            localStorage.getItem(BITACORA_KEY);
+        return JSON.parse(
+            localStorage.getItem(
+                BITACORA_KEY
+            )
+        ) || [];
 
-        if (!datos) {
-            return [];
-        }
-
-        const notas =
-            JSON.parse(datos);
-
-        if (!Array.isArray(notas)) {
-            return [];
-        }
-
-        return notas;
-
-    } catch (error) {
-
-        console.error(
-            "Error leyendo bitácora:",
-            error
-        );
+    } catch {
 
         return [];
     }
@@ -150,14 +240,18 @@ function guardarNota(texto) {
     const notas =
         obtenerBitacora();
 
+
     notas.push({
 
         texto: texto,
 
         fecha:
-            new Date().toLocaleString("es-AR")
+            new Date().toLocaleString(
+                "es-AR"
+            )
 
     });
+
 
     localStorage.setItem(
         BITACORA_KEY,
@@ -171,26 +265,28 @@ function mostrarBitacora() {
     const notas =
         obtenerBitacora();
 
-    if (notas.length === 0) {
 
-        agregarMensaje(
-            "La bitácora está vacía, Juan."
+    if (
+        notas.length === 0
+    ) {
+
+        addMessage(
+            "La bitácora está vacía."
         );
 
         return;
     }
 
-    agregarMensaje(
-        "M.E.C.A.: BITÁCORA — " +
-        notas.length +
-        " registro(s)"
+
+    addMessage(
+        `BITÁCORA — ${notas.length} registro(s)`
     );
 
 
     notas.forEach(
         (nota, indice) => {
 
-            agregarMensaje(
+            addMessage(
                 `${indice + 1}. [${nota.fecha}] ${nota.texto}`
             );
 
@@ -199,8 +295,12 @@ function mostrarBitacora() {
 }
 
 
+window.mostrarBitacora =
+    mostrarBitacora;
+
+
 /* =========================================================
-   PROCESAMIENTO DE BITÁCORA
+   COMANDOS DE BITÁCORA
    ========================================================= */
 
 function procesarBitacora(texto) {
@@ -209,13 +309,10 @@ function procesarBitacora(texto) {
         normalizar(texto);
 
 
-    /* ---------- VER BITÁCORA ---------- */
-
     if (
         limpio === "ver bitacora" ||
         limpio === "bitacora" ||
-        limpio === "ver notas" ||
-        limpio === "notas"
+        limpio === "ver notas"
     ) {
 
         mostrarBitacora();
@@ -224,261 +321,59 @@ function procesarBitacora(texto) {
     }
 
 
-    /* ---------- MECA ANOTA ---------- */
+    const patrones = [
+        "meca anota ",
+        "hector anota ",
+        "anota ",
+        "guarda "
+    ];
 
-    if (
-        limpio.startsWith("meca anota ")
-    ) {
-
-        const nota =
-            texto.substring(
-                texto.toLowerCase()
-                    .indexOf("meca anota ") +
-                11
-            ).trim();
-
-
-        if (!nota) {
-
-            agregarMensaje(
-                "Juan, necesito saber qué quieres que anote."
-            );
-
-            return true;
-        }
-
-
-        guardarNota(nota);
-
-        agregarMensaje(
-            "Anotado. El registro ha sido añadido a la bitácora."
-        );
-
-        return true;
-    }
-
-
-    /* ---------- GUARDA ---------- */
-
-    if (
-        limpio.startsWith("guarda ")
-    ) {
-
-        const nota =
-            texto.substring(
-                texto.toLowerCase()
-                    .indexOf("guarda ") +
-                7
-            ).trim();
-
-
-        if (!nota) {
-
-            agregarMensaje(
-                "¿Qué deseas que guarde?"
-            );
-
-            return true;
-        }
-
-
-        guardarNota(nota);
-
-        agregarMensaje(
-            "Registro almacenado en la bitácora."
-        );
-
-        return true;
-    }
-
-
-    return false;
-}
-
-
-/* =========================================================
-   CALCULADORA FÍSICA
-   ========================================================= */
-
-function obtenerNumero(texto, palabras) {
 
     for (
-        const palabra of palabras
+        const patron of patrones
     ) {
-
-        const expresion =
-            new RegExp(
-                palabra +
-                "\\s*(?:=|:)?" +
-                "\\s*(-?\\d+(?:[.,]\\d+)?)",
-                "i"
-            );
-
-        const coincidencia =
-            texto.match(expresion);
-
-
-        if (coincidencia) {
-
-            return parseFloat(
-                coincidencia[1]
-                    .replace(",", ".")
-            );
-        }
-    }
-
-    return null;
-}
-
-
-function procesarCalculadora(texto) {
-
-    const limpio =
-        normalizar(texto);
-
-
-    /* ---------- FUERZA ---------- */
-
-    if (
-        limpio.includes("calcular fuerza") ||
-        limpio.includes("calcula fuerza")
-    ) {
-
-        const presion =
-            obtenerNumero(
-                texto,
-                ["presion"]
-            );
-
-        const area =
-            obtenerNumero(
-                texto,
-                ["area"]
-            );
-
 
         if (
-            presion !== null &&
-            area !== null
+            limpio.startsWith(patron)
         ) {
 
-            const fuerza =
-                presion * area;
+            const posicion =
+                texto
+                    .toLowerCase()
+                    .indexOf(
+                        patron
+                    );
 
 
-            agregarMensaje(
-                "CÁLCULO FÍSICO\n\n" +
-                "F = P × A\n" +
-                `F = ${presion} × ${area}\n\n` +
-                `F = ${fuerza} N`
+            const nota =
+                texto
+                    .substring(
+                        posicion +
+                        patron.length
+                    )
+                    .trim();
+
+
+            if (!nota) {
+
+                addMessage(
+                    "Claro, Juan. ¿Qué quieres que anote?"
+                );
+
+                return true;
+            }
+
+
+            guardarNota(nota);
+
+
+            addMessage(
+                "Anotado. El registro quedó guardado en la bitácora."
             );
 
-        } else {
 
-            agregarMensaje(
-                "Necesito presión y área.\n\n" +
-                "Ejemplo:\n" +
-                "calcular fuerza presión 500 área 0.02"
-            );
+            return true;
         }
-
-        return true;
-    }
-
-
-    /* ---------- TORQUE ---------- */
-
-    if (
-        limpio.includes("calcular torque") ||
-        limpio.includes("calcula torque")
-    ) {
-
-        const fuerza =
-            obtenerNumero(
-                texto,
-                ["fuerza"]
-            );
-
-        const distancia =
-            obtenerNumero(
-                texto,
-                ["distancia", "radio"]
-            );
-
-
-        if (
-            fuerza !== null &&
-            distancia !== null
-        ) {
-
-            const torque =
-                fuerza * distancia;
-
-
-            agregarMensaje(
-                "CÁLCULO FÍSICO\n\n" +
-                "τ = F × r\n" +
-                `τ = ${fuerza} × ${distancia}\n\n` +
-                `τ = ${torque} N·m`
-            );
-
-        } else {
-
-            agregarMensaje(
-                "Necesito fuerza y distancia.\n\n" +
-                "Ejemplo:\n" +
-                "calcular torque fuerza 20 distancia 0.15"
-            );
-        }
-
-        return true;
-    }
-
-
-    /* ---------- PRESIÓN ---------- */
-
-    if (
-        limpio.includes("calcular presion") ||
-        limpio.includes("calcula presion")
-    ) {
-
-        const fuerza =
-            obtenerNumero(
-                texto,
-                ["fuerza"]
-            );
-
-        const area =
-            obtenerNumero(
-                texto,
-                ["area"]
-            );
-
-
-        if (
-            fuerza !== null &&
-            area !== null
-        ) {
-
-            const presion =
-                fuerza / area;
-
-
-            agregarMensaje(
-                "CÁLCULO FÍSICO\n\n" +
-                "P = F / A\n" +
-                `P = ${fuerza} / ${area}\n\n` +
-                `P = ${presion} Pa`
-            );
-
-        } else {
-
-            agregarMensaje(
-                "Necesito fuerza y área."
-            );
-        }
-
-        return true;
     }
 
 
@@ -487,86 +382,77 @@ function procesarCalculadora(texto) {
 
 
 /* =========================================================
-   VOZ
+   ESTADO VISUAL
    ========================================================= */
 
-function hablar(texto) {
+function estadoProcesando() {
 
-    if (!vozActiva) return;
+    const status =
+        document.getElementById(
+            "thinkingStatus"
+        );
 
-    if (
-        !("speechSynthesis" in window)
-    ) {
-        return;
-    }
-
-
-    window.speechSynthesis.cancel();
-
-
-    const voz =
-        new SpeechSynthesisUtterance(
-            texto
+    const core =
+        document.getElementById(
+            "coreStatus"
         );
 
 
-    voz.lang = "es-ES";
-    voz.rate = 0.95;
-    voz.pitch = 0.75;
-    voz.volume = 1;
+    if (status)
+        status.textContent =
+            "PROCESSING";
 
 
-    window.speechSynthesis.speak(
-        voz
-    );
+    if (core)
+        core.textContent =
+            "ANALYZING";
 }
 
 
-function activarVoz() {
+function estadoListo() {
 
-    vozActiva = !vozActiva;
-
-
-    if (!vozActiva) {
-
-        window.speechSynthesis.cancel();
-
-        agregarMensaje(
-            "Lectura de voz desactivada."
+    const status =
+        document.getElementById(
+            "thinkingStatus"
         );
 
-        return;
-    }
+    const core =
+        document.getElementById(
+            "coreStatus"
+        );
 
 
-    agregarMensaje(
-        "Lectura de voz activada."
-    );
+    if (status)
+        status.textContent =
+            "READY";
 
 
-    hablar(
-        "Lectura de voz activada."
-    );
+    if (core)
+        core.textContent =
+            "READY";
 }
 
 
 /* =========================================================
-   COMUNICACIÓN CON EL WORKER
+   IA
    ========================================================= */
 
-async function hablarConGemini(texto) {
+async function hablarConIA(texto) {
 
-    if (procesando) {
+    if (procesando)
         return;
-    }
 
 
     procesando = true;
 
-    mostrarProcesando();
+    estadoProcesando();
 
 
     try {
+
+        const historial =
+            obtenerHistorial();
+
 
         const respuesta =
             await fetch(
@@ -581,7 +467,12 @@ async function hablarConGemini(texto) {
                     },
 
                     body: JSON.stringify({
-                        message: texto
+
+                        message: texto,
+
+                        history:
+                            historial
+
                     })
 
                 }
@@ -592,213 +483,306 @@ async function hablarConGemini(texto) {
             await respuesta.json();
 
 
-        quitarProcesando();
+        if (!respuesta.ok) {
+
+            console.error(
+                "Error Worker:",
+                datos
+            );
 
 
-        console.log(
-            "Respuesta del núcleo:",
-            datos
+            let detalle =
+                JSON.stringify(
+                    datos
+                );
+
+
+            addMessage(
+                "El núcleo devolvió un error.\n" +
+                detalle
+            );
+
+
+            return;
+        }
+
+
+        const respuestaIA =
+            datos.reply;
+
+
+        if (
+            !respuestaIA
+        ) {
+
+            addMessage(
+                "Recibí una respuesta vacía del núcleo."
+            );
+
+            return;
+        }
+
+
+        addMessage(
+            respuestaIA,
+            "meca"
         );
 
 
-        if (!respuesta.ok) {
+        registrarConversacion(
+            "assistant",
+            respuestaIA
+        );
 
-    console.error(
-        "ERROR COMPLETO DEL WORKER:",
-        datos
-    );
 
-    let detalle = "";
-
-    if (datos.details) {
-        detalle =
-            typeof datos.details === "string"
-                ? datos.details
-                : JSON.stringify(datos.details);
-    }
-
-    if (datos.error) {
-        detalle +=
-            "\n" +
-            (
-                typeof datos.error === "string"
-                    ? datos.error
-                    : JSON.stringify(datos.error)
-            );
-    }
-
-    agregarMensaje(
-        "M.E.C.A.: el núcleo de IA devolvió un error.\n\n" +
-        detalle
-    );
-
-    procesando = false;
-
-    return;
-        }
-
-        if (
-            datos.reply
-        ) {
-
-            agregarMensaje(
-                datos.reply
-            );
-
-            hablar(
-                datos.reply
-            );
-
-        } else {
-
-            agregarMensaje(
-                "M.E.C.A.: recibí una respuesta, pero no pude interpretarla."
-            );
-        }
+        hablar(
+            respuestaIA
+        );
 
 
     } catch (error) {
 
-        quitarProcesando();
-
-
         console.error(
-            "Error de comunicación:",
+            "Error:",
             error
         );
 
 
-        agregarMensaje(
-            "M.E.C.A.: no pude comunicarme con el núcleo de IA."
+        addMessage(
+            "No pude establecer comunicación con el núcleo."
         );
 
+    } finally {
+
+        procesando =
+            false;
+
+        estadoListo();
+
     }
-
-
-    procesando = false;
 }
 
 
 /* =========================================================
-   FUNCIÓN PRINCIPAL
-   IMPORTANTE:
-   EL HTML LLAMA A sendMessage()
+   SEND MESSAGE
    ========================================================= */
 
 async function sendMessage() {
 
-    const input =
-        obtenerInput();
+    const campo =
+        input();
 
 
-    if (!input) {
-
-        console.error(
-            "M.E.C.A.: no existe #input"
-        );
-
+    if (!campo)
         return;
-    }
 
 
     const texto =
-        input.value.trim();
+        campo.value.trim();
 
 
-    if (!texto) {
+    if (!texto)
         return;
-    }
 
 
-    /* Mostrar mensaje de Juan */
+    if (procesando)
+        return;
 
-    agregarMensaje(
+
+    addMessage(
         texto,
         "usuario"
     );
 
 
-    /* Limpiar campo */
-
-    input.value = "";
+    campo.value = "";
 
 
-    /* ---------- BITÁCORA ---------- */
+    registrarConversacion(
+        "user",
+        texto
+    );
+
+
+    /*
+     * Comandos locales
+     */
 
     if (
         procesarBitacora(texto)
     ) {
+
         return;
     }
 
 
-    /* ---------- CALCULADORA ---------- */
-
-    if (
-        procesarCalculadora(texto)
-    ) {
-        return;
-    }
-
-
-    /* ---------- GEMINI ---------- */
-
-    await hablarConGemini(
+    await hablarConIA(
         texto
     );
 }
 
-
-/* =========================================================
-   HACER sendMessage VISIBLE PARA onclick=""
-   ========================================================= */
 
 window.sendMessage =
     sendMessage;
 
 
 /* =========================================================
-   ENTER PARA ENVIAR
+   VOZ
+   ========================================================= */
+
+function hablar(texto) {
+
+    if (!vozActiva)
+        return;
+
+
+    if (
+        !window.speechSynthesis
+    )
+        return;
+
+
+    speechSynthesis.cancel();
+
+
+    const voz =
+        new SpeechSynthesisUtterance(
+            texto
+        );
+
+
+    voz.lang =
+        "es-ES";
+
+    voz.rate =
+        .95;
+
+    voz.pitch =
+        .8;
+
+
+    speechSynthesis.speak(
+        voz
+    );
+}
+
+
+function toggleVoice() {
+
+    vozActiva =
+        !vozActiva;
+
+
+    const boton =
+        document.getElementById(
+            "voiceButton"
+        );
+
+
+    if (vozActiva) {
+
+        if (boton)
+            boton.textContent =
+                "◉ ON";
+
+
+        addMessage(
+            "Voz activada."
+        );
+
+    } else {
+
+        if (boton)
+            boton.textContent =
+                "◉";
+
+
+        speechSynthesis.cancel();
+
+
+        addMessage(
+            "Voz desactivada."
+        );
+    }
+}
+
+
+window.toggleVoice =
+    toggleVoice;
+
+
+/* =========================================================
+   RELOJ
+   ========================================================= */
+
+function actualizarReloj() {
+
+    const reloj =
+        document.getElementById(
+            "clock"
+        );
+
+
+    if (!reloj)
+        return;
+
+
+    const ahora =
+        new Date();
+
+
+    reloj.textContent =
+        ahora.toLocaleTimeString(
+            "es-AR",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+}
+
+
+setInterval(
+    actualizarReloj,
+    1000
+);
+
+
+/* =========================================================
+   ENTER
    ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
-    function() {
+    () => {
 
-        const input =
-            obtenerInput();
+        const campo =
+            input();
 
 
-        if (!input) {
-            return;
+        if (campo) {
+
+            campo.addEventListener(
+                "keydown",
+                event => {
+
+                    if (
+                        event.key ===
+                        "Enter"
+                    ) {
+
+                        event.preventDefault();
+
+                        sendMessage();
+                    }
+
+                }
+            );
+
         }
 
 
-        input.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (
-                    event.key === "Enter"
-                ) {
-
-                    event.preventDefault();
-
-                    sendMessage();
-                }
-
-            }
-        );
-
-
-        console.log(
-            "M.E.C.A. OS iniciado."
-        );
-
-        console.log(
-            "Núcleo:",
-            WORKER_URL
-        );
+        actualizarReloj();
 
     }
 );
