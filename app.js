@@ -1,777 +1,786 @@
-/* ============================================================
-   M.E.C.A. — APP.JS
-   Mechanics & Engineering Cognitive Assistant
-   ============================================================ */
-
-/* =========================
-   CONFIGURACIÓN
-   ========================= */
+/* =========================================================
+   M.E.C.A. OS
+   APP.JS — Núcleo de conversación
+   ========================================================= */
 
 const WORKER_URL =
-  "https://meca-core.nicomeca121.workers.dev/";
+    "https://meca-core.nicomeca121.workers.dev";
 
-/* =========================
-   ESTADO
-   ========================= */
-
-let vozActiva = false;
 let procesando = false;
+let vozActiva = false;
 
-/* =========================
+
+/* =========================================================
    ELEMENTOS DEL HUD
-   ========================= */
+   ========================================================= */
 
-const chat =
-  document.getElementById("chat") ||
-  document.getElementById("messages") ||
-  document.querySelector(".chat");
+function obtenerInput() {
+    return document.getElementById("input");
+}
 
-const input =
-  document.getElementById("userInput") ||
-  document.getElementById("messageInput") ||
-  document.querySelector("input[type='text']");
-
-const sendButton =
-  document.getElementById("sendBtn") ||
-  document.getElementById("sendButton") ||
-  document.querySelector("button");
-
-const voiceButton =
-  document.getElementById("voiceBtn") ||
-  document.getElementById("voiceButton");
-
-
-/* =========================
-   UTILIDADES
-   ========================= */
-
-function normalizarTexto(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+function obtenerMensajes() {
+    return document.getElementById("messages");
 }
 
 
-function escaparHTML(texto) {
-  const div = document.createElement("div");
-  div.textContent = texto;
-  return div.innerHTML;
-}
-
-
-/* =========================
+/* =========================================================
    CHAT
-   ========================= */
+   ========================================================= */
 
 function agregarMensaje(texto, tipo = "meca") {
 
-  if (!chat) {
-    console.warn("No se encontró el contenedor del chat.");
-    return;
-  }
+    const contenedor = obtenerMensajes();
 
-  const mensaje = document.createElement("div");
+    if (!contenedor) {
+        console.error("M.E.C.A.: no encuentro #messages");
+        return;
+    }
 
-  mensaje.className =
-    tipo === "usuario"
-      ? "message user-message"
-      : "message meca-message";
+    const mensaje = document.createElement("div");
 
-  mensaje.innerHTML = escaparHTML(texto);
+    mensaje.classList.add("message");
 
-  chat.appendChild(mensaje);
+    if (tipo === "usuario") {
+        mensaje.classList.add("usuario");
+    } else {
+        mensaje.classList.add("meca");
+    }
 
-  chat.scrollTop = chat.scrollHeight;
+    mensaje.textContent = texto;
+
+    contenedor.appendChild(mensaje);
+
+    contenedor.scrollTop = contenedor.scrollHeight;
 }
 
 
-function mostrarEstado(texto) {
+function mostrarProcesando() {
 
-  if (!chat) return;
+    const contenedor = obtenerMensajes();
 
-  const estado = document.createElement("div");
+    if (!contenedor) return;
 
-  estado.className = "message meca-message processing";
+    const anterior =
+        document.getElementById("meca-processing");
 
-  estado.textContent = texto;
+    if (anterior) anterior.remove();
 
-  estado.id = "meca-processing";
+    const mensaje =
+        document.createElement("div");
 
-  chat.appendChild(estado);
+    mensaje.id = "meca-processing";
+    mensaje.className = "message meca";
+    mensaje.textContent =
+        "M.E.C.A.: procesando...";
 
-  chat.scrollTop = chat.scrollHeight;
+    contenedor.appendChild(mensaje);
+
+    contenedor.scrollTop =
+        contenedor.scrollHeight;
 }
 
 
-function quitarEstado() {
+function quitarProcesando() {
 
-  const estado =
-    document.getElementById("meca-processing");
+    const elemento =
+        document.getElementById("meca-processing");
 
-  if (estado) {
-    estado.remove();
-  }
+    if (elemento) {
+        elemento.remove();
+    }
 }
 
 
-/* =========================
+/* =========================================================
+   NORMALIZACIÓN
+   ========================================================= */
+
+function normalizar(texto) {
+
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+}
+
+
+/* =========================================================
    BITÁCORA
-   ========================= */
+   ========================================================= */
 
-const STORAGE_KEY = "meca_bitacora";
+const BITACORA_KEY =
+    "meca_bitacora";
 
 
 function obtenerBitacora() {
 
-  try {
+    try {
 
-    const datos =
-      localStorage.getItem(STORAGE_KEY);
+        const datos =
+            localStorage.getItem(BITACORA_KEY);
 
-    if (!datos) return [];
+        if (!datos) {
+            return [];
+        }
 
-    const notas = JSON.parse(datos);
+        const notas =
+            JSON.parse(datos);
 
-    return Array.isArray(notas)
-      ? notas
-      : [];
+        if (!Array.isArray(notas)) {
+            return [];
+        }
 
-  } catch (error) {
+        return notas;
 
-    console.error(
-      "Error leyendo bitácora:",
-      error
-    );
+    } catch (error) {
 
-    return [];
-  }
+        console.error(
+            "Error leyendo bitácora:",
+            error
+        );
+
+        return [];
+    }
 }
 
 
 function guardarNota(texto) {
 
-  const notas = obtenerBitacora();
+    const notas =
+        obtenerBitacora();
 
-  notas.push({
-    texto: texto,
-    fecha: new Date().toLocaleString("es-AR")
-  });
+    notas.push({
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(notas)
-  );
+        texto: texto,
+
+        fecha:
+            new Date().toLocaleString("es-AR")
+
+    });
+
+    localStorage.setItem(
+        BITACORA_KEY,
+        JSON.stringify(notas)
+    );
 }
 
 
 function mostrarBitacora() {
 
-  const notas = obtenerBitacora();
+    const notas =
+        obtenerBitacora();
 
-  if (notas.length === 0) {
+    if (notas.length === 0) {
 
-    agregarMensaje(
-      "La bitácora está vacía, Juan."
-    );
+        agregarMensaje(
+            "La bitácora está vacía, Juan."
+        );
 
-    return;
-  }
-
-  agregarMensaje(
-    "BITÁCORA DE M.E.C.A."
-  );
-
-  notas.forEach((nota, indice) => {
+        return;
+    }
 
     agregarMensaje(
-      `${indice + 1}. [${nota.fecha}] ${nota.texto}`
+        "M.E.C.A.: BITÁCORA — " +
+        notas.length +
+        " registro(s)"
     );
 
-  });
+
+    notas.forEach(
+        (nota, indice) => {
+
+            agregarMensaje(
+                `${indice + 1}. [${nota.fecha}] ${nota.texto}`
+            );
+
+        }
+    );
 }
 
 
-/* =========================
-   COMANDOS DE BITÁCORA
-   ========================= */
+/* =========================================================
+   PROCESAMIENTO DE BITÁCORA
+   ========================================================= */
 
 function procesarBitacora(texto) {
 
-  const limpio =
-    normalizarTexto(texto);
+    const limpio =
+        normalizar(texto);
 
-  /*
-     MECA ANOTA ...
-     GUARDA ...
-  */
 
-  if (
-    limpio.startsWith("meca anota ")
-  ) {
+    /* ---------- VER BITÁCORA ---------- */
 
-    const nota =
-      texto.substring(
-        texto.toLowerCase().indexOf("meca anota ") +
-        "meca anota ".length
-      ).trim();
+    if (
+        limpio === "ver bitacora" ||
+        limpio === "bitacora" ||
+        limpio === "ver notas" ||
+        limpio === "notas"
+    ) {
 
-    if (!nota) {
+        mostrarBitacora();
 
-      agregarMensaje(
-        "Necesito saber qué quieres que anote, Juan."
-      );
-
-      return true;
+        return true;
     }
 
-    guardarNota(nota);
 
-    agregarMensaje(
-      "Anotado en la bitácora, Juan. La información permanecerá guardada en este dispositivo."
-    );
+    /* ---------- MECA ANOTA ---------- */
 
-    return true;
-  }
+    if (
+        limpio.startsWith("meca anota ")
+    ) {
+
+        const nota =
+            texto.substring(
+                texto.toLowerCase()
+                    .indexOf("meca anota ") +
+                11
+            ).trim();
 
 
-  if (
-    limpio.startsWith("guarda ")
-  ) {
+        if (!nota) {
 
-    const nota =
-      texto.substring(
-        texto.toLowerCase().indexOf("guarda ") +
-        "guarda ".length
-      ).trim();
+            agregarMensaje(
+                "Juan, necesito saber qué quieres que anote."
+            );
 
-    if (!nota) {
+            return true;
+        }
 
-      agregarMensaje(
-        "¿Qué quieres que guarde?"
-      );
 
-      return true;
+        guardarNota(nota);
+
+        agregarMensaje(
+            "Anotado. El registro ha sido añadido a la bitácora."
+        );
+
+        return true;
     }
 
-    guardarNota(nota);
 
-    agregarMensaje(
-      "Guardado correctamente en la bitácora."
-    );
+    /* ---------- GUARDA ---------- */
 
-    return true;
-  }
+    if (
+        limpio.startsWith("guarda ")
+    ) {
 
-
-  if (
-    limpio === "ver bitacora" ||
-    limpio === "bitacora" ||
-    limpio === "notas" ||
-    limpio === "ver notas"
-  ) {
-
-    mostrarBitacora();
-
-    return true;
-  }
+        const nota =
+            texto.substring(
+                texto.toLowerCase()
+                    .indexOf("guarda ") +
+                7
+            ).trim();
 
 
-  return false;
+        if (!nota) {
+
+            agregarMensaje(
+                "¿Qué deseas que guarde?"
+            );
+
+            return true;
+        }
+
+
+        guardarNota(nota);
+
+        agregarMensaje(
+            "Registro almacenado en la bitácora."
+        );
+
+        return true;
+    }
+
+
+    return false;
 }
 
 
-/* =========================
-   CALCULADORA DE FÍSICA
-   ========================= */
+/* =========================================================
+   CALCULADORA FÍSICA
+   ========================================================= */
+
+function obtenerNumero(texto, palabras) {
+
+    for (
+        const palabra of palabras
+    ) {
+
+        const expresion =
+            new RegExp(
+                palabra +
+                "\\s*(?:=|:)?" +
+                "\\s*(-?\\d+(?:[.,]\\d+)?)",
+                "i"
+            );
+
+        const coincidencia =
+            texto.match(expresion);
+
+
+        if (coincidencia) {
+
+            return parseFloat(
+                coincidencia[1]
+                    .replace(",", ".")
+            );
+        }
+    }
+
+    return null;
+}
+
 
 function procesarCalculadora(texto) {
 
-  const limpio =
-    normalizarTexto(texto);
+    const limpio =
+        normalizar(texto);
 
-  /*
-     FUERZA = PRESIÓN × ÁREA
 
-     Ejemplos:
-
-     fuerza presion 500 area 0.02
-
-     calcular fuerza presion 500 area 0.02
-  */
-
-  if (
-    limpio.includes("calcular fuerza") ||
-    limpio.includes("calcula fuerza")
-  ) {
-
-    const presion =
-      extraerNumeroDespuesDe(
-        texto,
-        [
-          "presion",
-          "presión"
-        ]
-      );
-
-    const area =
-      extraerNumeroDespuesDe(
-        texto,
-        [
-          "area",
-          "área"
-        ]
-      );
+    /* ---------- FUERZA ---------- */
 
     if (
-      presion !== null &&
-      area !== null
+        limpio.includes("calcular fuerza") ||
+        limpio.includes("calcula fuerza")
     ) {
 
-      const fuerza =
-        presion * area;
+        const presion =
+            obtenerNumero(
+                texto,
+                ["presion"]
+            );
 
-      agregarMensaje(
-        `Cálculo físico:\nF = P × A\nF = ${presion} × ${area}\n\nF = ${fuerza} N`
-      );
-
-    } else {
-
-      agregarMensaje(
-        "Para calcular fuerza necesito presión y área. Ejemplo: «calcular fuerza presión 500 área 0.02»."
-      );
-    }
-
-    return true;
-  }
+        const area =
+            obtenerNumero(
+                texto,
+                ["area"]
+            );
 
 
-  /*
-     TORQUE = FUERZA × DISTANCIA
-  */
+        if (
+            presion !== null &&
+            area !== null
+        ) {
 
-  if (
-    limpio.includes("calcular torque") ||
-    limpio.includes("calcula torque")
-  ) {
-
-    const fuerza =
-      extraerNumeroDespuesDe(
-        texto,
-        ["fuerza"]
-      );
-
-    const distancia =
-      extraerNumeroDespuesDe(
-        texto,
-        [
-          "distancia",
-          "radio"
-        ]
-      );
-
-    if (
-      fuerza !== null &&
-      distancia !== null
-    ) {
-
-      const torque =
-        fuerza * distancia;
-
-      agregarMensaje(
-        `Cálculo físico:\nτ = F × r\nτ = ${fuerza} × ${distancia}\n\nτ = ${torque} N·m`
-      );
-
-    } else {
-
-      agregarMensaje(
-        "Para calcular torque necesito fuerza y distancia. Ejemplo: «calcular torque fuerza 20 distancia 0.15»."
-      );
-    }
-
-    return true;
-  }
+            const fuerza =
+                presion * area;
 
 
-  /*
-     PRESIÓN = FUERZA / ÁREA
-  */
+            agregarMensaje(
+                "CÁLCULO FÍSICO\n\n" +
+                "F = P × A\n" +
+                `F = ${presion} × ${area}\n\n` +
+                `F = ${fuerza} N`
+            );
 
-  if (
-    limpio.includes("calcular presion") ||
-    limpio.includes("calcula presion")
-  ) {
+        } else {
 
-    const fuerza =
-      extraerNumeroDespuesDe(
-        texto,
-        ["fuerza"]
-      );
-
-    const area =
-      extraerNumeroDespuesDe(
-        texto,
-        [
-          "area",
-          "superficie"
-        ]
-      );
-
-    if (
-      fuerza !== null &&
-      area !== null
-    ) {
-
-      const presion =
-        fuerza / area;
-
-      agregarMensaje(
-        `Cálculo físico:\nP = F / A\nP = ${fuerza} / ${area}\n\nP = ${presion} Pa`
-      );
-
-    } else {
-
-      agregarMensaje(
-        "Para calcular presión necesito fuerza y área. Ejemplo: «calcular presión fuerza 20 área 0.01»."
-      );
-    }
-
-    return true;
-  }
-
-
-  return false;
-}
-
-
-function extraerNumeroDespuesDe(texto, palabras) {
-
-  for (const palabra of palabras) {
-
-    const regex =
-      new RegExp(
-        palabra + "\\s*[:=]?\\s*(-?\\d+(?:[.,]\\d+)?)",
-        "i"
-      );
-
-    const resultado =
-      texto.match(regex);
-
-    if (resultado) {
-
-      return parseFloat(
-        resultado[1].replace(",", ".")
-      );
-
-    }
-  }
-
-  return null;
-}
-
-
-/* =========================
-   PETICIÓN A GEMINI
-   ========================= */
-
-async function preguntarAMeca(texto) {
-
-  if (procesando) return;
-
-  procesando = true;
-
-  mostrarEstado(
-    "M.E.C.A. está procesando..."
-  );
-
-  try {
-
-    const respuesta =
-      await fetch(
-        WORKER_URL,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            message: texto
-          })
+            agregarMensaje(
+                "Necesito presión y área.\n\n" +
+                "Ejemplo:\n" +
+                "calcular fuerza presión 500 área 0.02"
+            );
         }
-      );
 
-
-    const datos =
-      await respuesta.json();
-
-
-    quitarEstado();
-
-
-    if (!respuesta.ok) {
-
-      console.error(
-        "Error del Worker:",
-        datos
-      );
-
-      agregarMensaje(
-        "He recibido una respuesta de error del núcleo de IA. Revisa la conexión con el Worker."
-      );
-
-      procesando = false;
-
-      return;
+        return true;
     }
 
+
+    /* ---------- TORQUE ---------- */
 
     if (
-      datos.reply
+        limpio.includes("calcular torque") ||
+        limpio.includes("calcula torque")
     ) {
 
-      agregarMensaje(
-        datos.reply
-      );
+        const fuerza =
+            obtenerNumero(
+                texto,
+                ["fuerza"]
+            );
 
-      hablar(
-        datos.reply
-      );
+        const distancia =
+            obtenerNumero(
+                texto,
+                ["distancia", "radio"]
+            );
 
-    } else {
 
-      console.error(
-        "Respuesta inesperada:",
-        datos
-      );
+        if (
+            fuerza !== null &&
+            distancia !== null
+        ) {
 
-      agregarMensaje(
-        "El núcleo respondió, pero no pude interpretar su respuesta."
-      );
+            const torque =
+                fuerza * distancia;
+
+
+            agregarMensaje(
+                "CÁLCULO FÍSICO\n\n" +
+                "τ = F × r\n" +
+                `τ = ${fuerza} × ${distancia}\n\n` +
+                `τ = ${torque} N·m`
+            );
+
+        } else {
+
+            agregarMensaje(
+                "Necesito fuerza y distancia.\n\n" +
+                "Ejemplo:\n" +
+                "calcular torque fuerza 20 distancia 0.15"
+            );
+        }
+
+        return true;
     }
 
 
-  } catch (error) {
+    /* ---------- PRESIÓN ---------- */
 
-    quitarEstado();
+    if (
+        limpio.includes("calcular presion") ||
+        limpio.includes("calcula presion")
+    ) {
 
-    console.error(
-      "Error comunicando con M.E.C.A.:",
-      error
-    );
+        const fuerza =
+            obtenerNumero(
+                texto,
+                ["fuerza"]
+            );
 
-    agregarMensaje(
-      "No pude establecer comunicación con el núcleo de IA. Comprueba la conexión con el servidor M.E.C.A."
-    );
+        const area =
+            obtenerNumero(
+                texto,
+                ["area"]
+            );
 
-  }
+
+        if (
+            fuerza !== null &&
+            area !== null
+        ) {
+
+            const presion =
+                fuerza / area;
 
 
-  procesando = false;
+            agregarMensaje(
+                "CÁLCULO FÍSICO\n\n" +
+                "P = F / A\n" +
+                `P = ${fuerza} / ${area}\n\n` +
+                `P = ${presion} Pa`
+            );
+
+        } else {
+
+            agregarMensaje(
+                "Necesito fuerza y área."
+            );
+        }
+
+        return true;
+    }
+
+
+    return false;
 }
 
 
-/* =========================
-   PROCESAMIENTO DEL MENSAJE
-   ========================= */
-
-async function procesarMensaje() {
-
-  if (!input) return;
-
-  const texto =
-    input.value.trim();
-
-  if (!texto) return;
-
-
-  agregarMensaje(
-    texto,
-    "usuario"
-  );
-
-  input.value = "";
-
-
-  /*
-     Primero comprobamos funciones
-     locales. Esto permite que la
-     bitácora y calculadora funcionen
-     incluso sin Internet.
-  */
-
-  if (
-    procesarBitacora(texto)
-  ) {
-    return;
-  }
-
-
-  if (
-    procesarCalculadora(texto)
-  ) {
-    return;
-  }
-
-
-  /*
-     Todo lo demás pasa a Gemini.
-     Ya no dependemos de una lista
-     rígida de frases.
-  */
-
-  await preguntarAMeca(texto);
-}
-
-
-/* =========================
+/* =========================================================
    VOZ
-   ========================= */
+   ========================================================= */
 
 function hablar(texto) {
 
-  if (!vozActiva) return;
+    if (!vozActiva) return;
 
-  if (
-    !("speechSynthesis" in window)
-  ) {
+    if (
+        !("speechSynthesis" in window)
+    ) {
+        return;
+    }
 
-    console.warn(
-      "Speech Synthesis no disponible."
-    );
-
-    return;
-  }
-
-
-  window.speechSynthesis.cancel();
-
-
-  const voz =
-    new SpeechSynthesisUtterance(
-      texto
-    );
-
-
-  voz.lang = "es-ES";
-
-  /*
-     Un tono ligeramente grave
-     y una velocidad moderada.
-  */
-
-  voz.rate = 0.95;
-
-  voz.pitch = 0.75;
-
-  voz.volume = 1;
-
-
-  window.speechSynthesis.speak(
-    voz
-  );
-}
-
-
-function alternarVoz() {
-
-  vozActiva =
-    !vozActiva;
-
-
-  if (voiceButton) {
-
-    voiceButton.textContent =
-      vozActiva
-        ? "🔊 VOZ: ON"
-        : "🔇 VOZ: OFF";
-  }
-
-
-  if (!vozActiva) {
 
     window.speechSynthesis.cancel();
 
+
+    const voz =
+        new SpeechSynthesisUtterance(
+            texto
+        );
+
+
+    voz.lang = "es-ES";
+    voz.rate = 0.95;
+    voz.pitch = 0.75;
+    voz.volume = 1;
+
+
+    window.speechSynthesis.speak(
+        voz
+    );
+}
+
+
+function activarVoz() {
+
+    vozActiva = !vozActiva;
+
+
+    if (!vozActiva) {
+
+        window.speechSynthesis.cancel();
+
+        agregarMensaje(
+            "Lectura de voz desactivada."
+        );
+
+        return;
+    }
+
+
     agregarMensaje(
-      "Lectura por voz desactivada."
+        "Lectura de voz activada."
     );
 
-  } else {
-
-    agregarMensaje(
-      "Lectura por voz activada."
-    );
 
     hablar(
-      "Lectura por voz activada."
+        "Lectura de voz activada."
     );
-  }
 }
 
 
-/* =========================
-   EVENTOS
-   ========================= */
+/* =========================================================
+   COMUNICACIÓN CON EL WORKER
+   ========================================================= */
 
-if (sendButton) {
+async function hablarConGemini(texto) {
 
-  sendButton.addEventListener(
-    "click",
-    procesarMensaje
-  );
-
-}
+    if (procesando) {
+        return;
+    }
 
 
-if (input) {
+    procesando = true;
 
-  input.addEventListener(
-    "keydown",
-    function(event) {
+    mostrarProcesando();
 
-      if (
-        event.key === "Enter"
-      ) {
 
-        event.preventDefault();
+    try {
 
-        procesarMensaje();
-      }
+        const respuesta =
+            await fetch(
+                WORKER_URL,
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        message: texto
+                    })
+
+                }
+            );
+
+
+        const datos =
+            await respuesta.json();
+
+
+        quitarProcesando();
+
+
+        console.log(
+            "Respuesta del núcleo:",
+            datos
+        );
+
+
+        if (!respuesta.ok) {
+
+            console.error(
+                "Error Worker:",
+                datos
+            );
+
+
+            agregarMensaje(
+                "M.E.C.A.: el núcleo de IA devolvió un error."
+            );
+
+            procesando = false;
+
+            return;
+        }
+
+
+        if (
+            datos.reply
+        ) {
+
+            agregarMensaje(
+                datos.reply
+            );
+
+            hablar(
+                datos.reply
+            );
+
+        } else {
+
+            agregarMensaje(
+                "M.E.C.A.: recibí una respuesta, pero no pude interpretarla."
+            );
+        }
+
+
+    } catch (error) {
+
+        quitarProcesando();
+
+
+        console.error(
+            "Error de comunicación:",
+            error
+        );
+
+
+        agregarMensaje(
+            "M.E.C.A.: no pude comunicarme con el núcleo de IA."
+        );
 
     }
-  );
 
+
+    procesando = false;
 }
 
 
-if (voiceButton) {
+/* =========================================================
+   FUNCIÓN PRINCIPAL
+   IMPORTANTE:
+   EL HTML LLAMA A sendMessage()
+   ========================================================= */
 
-  voiceButton.addEventListener(
-    "click",
-    alternarVoz
-  );
+async function sendMessage() {
 
+    const input =
+        obtenerInput();
+
+
+    if (!input) {
+
+        console.error(
+            "M.E.C.A.: no existe #input"
+        );
+
+        return;
+    }
+
+
+    const texto =
+        input.value.trim();
+
+
+    if (!texto) {
+        return;
+    }
+
+
+    /* Mostrar mensaje de Juan */
+
+    agregarMensaje(
+        texto,
+        "usuario"
+    );
+
+
+    /* Limpiar campo */
+
+    input.value = "";
+
+
+    /* ---------- BITÁCORA ---------- */
+
+    if (
+        procesarBitacora(texto)
+    ) {
+        return;
+    }
+
+
+    /* ---------- CALCULADORA ---------- */
+
+    if (
+        procesarCalculadora(texto)
+    ) {
+        return;
+    }
+
+
+    /* ---------- GEMINI ---------- */
+
+    await hablarConGemini(
+        texto
+    );
 }
 
 
-/* =========================
-   INICIALIZACIÓN
-   ========================= */
+/* =========================================================
+   HACER sendMessage VISIBLE PARA onclick=""
+   ========================================================= */
+
+window.sendMessage =
+    sendMessage;
+
+
+/* =========================================================
+   ENTER PARA ENVIAR
+   ========================================================= */
 
 document.addEventListener(
-  "DOMContentLoaded",
-  function() {
+    "DOMContentLoaded",
+    function() {
 
-    console.log(
-      "M.E.C.A. iniciado correctamente."
-    );
+        const input =
+            obtenerInput();
 
-    console.log(
-      "Núcleo remoto:",
-      WORKER_URL
-    );
 
-  }
+        if (!input) {
+            return;
+        }
+
+
+        input.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    event.preventDefault();
+
+                    sendMessage();
+                }
+
+            }
+        );
+
+
+        console.log(
+            "M.E.C.A. OS iniciado."
+        );
+
+        console.log(
+            "Núcleo:",
+            WORKER_URL
+        );
+
+    }
 );
